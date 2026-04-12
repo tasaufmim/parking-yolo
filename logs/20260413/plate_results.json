@@ -3,9 +3,33 @@
     "slot_id": "P3",
     "car_id": "CAR260413001",
     "plate_text": "KA03MW9473",
-    "plate_color": "white",
-    "text_color": "black",
-    "timestamp": "2026-04-13T00:42:56.517425",
-    "image_file": "260413_004253_P3_CAR260413001_licenseplate.jpg"
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-13T01:23:10.437549",
+    "image_file": "260413_012306_P3_CAR260413001_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P4",
+    "car_id": "CAR260413004",
+    "plate_text": "KA01MK4717",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-13T01:25:16.995207",
+    "image_file": "260413_012513_P4_CAR260413004_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P1",
+    "car_id": "CAR260413005",
+    "plate_text": "KA01MY8670",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-13T01:25:21.960537",
+    "image_file": "260413_012518_P1_CAR260413005_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
   }
 ]
