@@ -6,10 +6,96 @@ from ultralytics import YOLO
 import numpy as np
 
 
+def enhance_frame(frame: np.ndarray) -> np.ndarray:
+    """Enhance frame for better detection (CLAHE + brightness)."""
+    if len(frame.shape) == 3 and frame.shape[2] == 3:
+        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        l = np.clip(l * 1.15, 0, 255).astype(np.uint8)
+        enhanced = cv2.merge([l, a, b])
+        return cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
+    return frame
+
+
+class LicensePlateDetector:
+    def __init__(self, confidence: float = 0.5):
+        self.model = YOLO("yolov8n-license-plate.pt")
+        self.confidence = confidence
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
+        print(f"License Plate Detection running on: {self.device}")
+
+    def detect(self, cropped_vehicle: np.ndarray) -> list[dict]:
+        """Detect license plates in cropped vehicle image. Returns list of {bbox, confidence}."""
+        results = self.model.predict(
+            cropped_vehicle,
+            conf=self.confidence,
+            verbose=False,
+        )
+        detections = []
+        for r in results:
+            if r.boxes is None:
+                continue
+            for box in r.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                conf = float(box.conf[0])
+                detections.append({
+                    "bbox": [x1, y1, x2, y2],
+                    "confidence": conf,
+                })
+        return detections
+
+    def get_best_plate(self, cropped_vehicle: np.ndarray) -> tuple[np.ndarray | None, list[int] | None]:
+        """Get the best license plate crop and bbox. Returns (enhanced_plate, bbox) or (None, None)."""
+        detections = self.detect(cropped_vehicle)
+        if not detections:
+            return None, None
+        
+        best = max(detections, key=lambda d: d["confidence"])
+        x1, y1, x2, y2 = best["bbox"]
+        
+        pad = 2
+        h, w = cropped_vehicle.shape[:2]
+        x1_p = max(0, x1 - pad)
+        y1_p = max(0, y1 - pad)
+        x2_p = min(w, x2 + pad)
+        y2_p = min(h, y2 + pad)
+        
+        plate_crop = cropped_vehicle[y1_p:y2_p, x1_p:x2_p]
+        if plate_crop.size == 0:
+            return None, None
+        
+        enhanced = self.enhance_plate(plate_crop)
+        return enhanced, best["bbox"]
+
+    def enhance_plate(self, plate_crop: np.ndarray) -> np.ndarray:
+        """Enhance license plate image for better readability."""
+        if len(plate_crop.shape) == 3 and plate_crop.shape[2] == 3:
+            gray = cv2.cvtColor(plate_crop, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = plate_crop
+        
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        enhanced = clahe.apply(gray)
+        
+        scale_factor = 3
+        new_h, new_w = enhanced.shape[:2] * scale_factor
+        enhanced = cv2.resize(enhanced, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+        
+        return enhanced
+
+
 class CarDetector:
-    def __init__(self, confidence: float = 0.9):
+    def __init__(self, confidence: float = 0.9, use_enhancement: bool = True):
         self.model = YOLO("yolov8m.pt")
         self.confidence = confidence
+        self.use_enhancement = use_enhancement
         self.vehicle_classes = [2, 5, 7]
         self.class_names = {2: "Car", 5: "Bus", 7: "Truck"}
         self.car_counters = {2: 0, 5: 0, 7: 0}
@@ -25,6 +111,10 @@ class CarDetector:
 
     def detect(self, frame: np.ndarray) -> list[dict]:
         """Run tracking on a frame. Returns list of {bbox, confidence, class, car_id, track_id}."""
+        if self.use_enhancement:
+            original_frame = frame
+            frame = enhance_frame(frame)
+        
         results = self.model.track(
             frame,
             conf=self.confidence,

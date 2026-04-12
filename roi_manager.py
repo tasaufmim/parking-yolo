@@ -14,14 +14,36 @@ class ROIManager:
         self.slots: list[dict] = []
         self.slot_tracking: dict[str, dict] = {}
         self.captured_vehicles: dict[str, dict] = {}
+        self.captured_plates: dict[str, dict] = {}
         self.last_statuses: list[dict] = []
         self.last_snapshot_error: str | None = None
+        self.license_plate_detector = None
+        self._init_license_plate_detector()
         self.load()
 
-    def _get_snapshot_path(self) -> str:
+    def _init_license_plate_detector(self):
+        """Initialize license plate detector."""
+        try:
+            from license_plate_detector import LicensePlateDetector
+            self.license_plate_detector = LicensePlateDetector()
+        except Exception:
+            self.license_plate_detector = None
+
+    def set_license_plate_detector(self, detector):
+        """Set the license plate detector instance."""
+        self.license_plate_detector = detector
+
+    def _get_vehicle_snapshot_path(self) -> str:
         now = datetime.now()
         date_str = now.strftime("%Y%m%d")
         path = os.path.join("logs", date_str, "snapshots", "vehicles")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def _get_plate_snapshot_path(self) -> str:
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d")
+        path = os.path.join("logs", date_str, "snapshots", "license_plates")
         os.makedirs(path, exist_ok=True)
         return path
 
@@ -49,10 +71,8 @@ class ROIManager:
 
         now = datetime.now()
         timestamp = now.strftime("%y%m%d_%H%M%S")
-
-        class_lower = car_id.lower().split("#")[0]
-        filename = f"{timestamp}_{slot_id}_{class_lower}{car_id.split('#')[1] if '#' in car_id else car_id}.jpg"
-        filepath = os.path.join(self._get_snapshot_path(), filename)
+        filename = f"{timestamp}_{slot_id}_{car_id}.jpg"
+        filepath = os.path.join(self._get_vehicle_snapshot_path(), filename)
 
         try:
             success = cv2.imwrite(filepath, cropped)
@@ -60,6 +80,7 @@ class ROIManager:
                 self.captured_vehicles[capture_key] = {
                     "filepath": filepath,
                     "captured_at": now.isoformat(),
+                    "detection_bbox": detection_bbox,
                 }
                 self.last_snapshot_error = None
                 return True, ""
@@ -69,6 +90,51 @@ class ROIManager:
         except Exception as e:
             self.last_snapshot_error = f"Error saving {car_id}: {str(e)}"
             return False, self.last_snapshot_error
+
+    def capture_license_plate(
+        self, frame: np.ndarray, slot_id: str, car_id: str, detection_bbox: list[int]
+    ) -> tuple[bool, str]:
+        """Capture license plate from vehicle. Returns (success, error_message)."""
+        if self.license_plate_detector is None:
+            return False, "License plate detector not initialized"
+
+        capture_key = f"{slot_id}_{car_id}"
+        if capture_key in self.captured_plates:
+            return False, f"License plate already captured for {car_id} in {slot_id}"
+
+        x1, y1, x2, y2 = detection_bbox
+        pad = 10
+        h, w = frame.shape[:2]
+        x1_p = max(0, x1 - pad)
+        y1_p = max(0, y1 - pad)
+        x2_p = min(w, x2 + pad)
+        y2_p = min(h, y2 + pad)
+
+        cropped_vehicle = frame[y1_p:y2_p, x1_p:x2_p]
+        if cropped_vehicle.size == 0:
+            return False, "Failed to crop vehicle for plate detection"
+
+        enhanced_plate, plate_bbox = self.license_plate_detector.get_best_plate(cropped_vehicle)
+        if enhanced_plate is None:
+            return False, "No license plate detected"
+
+        now = datetime.now()
+        timestamp = now.strftime("%y%m%d_%H%M%S")
+        filename = f"{timestamp}_{slot_id}_{car_id}_licenseplate.jpg"
+        filepath = os.path.join(self._get_plate_snapshot_path(), filename)
+
+        try:
+            success = cv2.imwrite(filepath, enhanced_plate)
+            if success:
+                self.captured_plates[capture_key] = {
+                    "filepath": filepath,
+                    "captured_at": now.isoformat(),
+                }
+                return True, ""
+            else:
+                return False, f"Failed to save license plate for {car_id}"
+        except Exception as e:
+            return False, f"Error saving license plate: {str(e)}"
 
     def get_snapshot_error(self) -> str | None:
         err = self.last_snapshot_error
@@ -110,14 +176,22 @@ class ROIManager:
                             )
                             if success:
                                 curr["snapshot_captured"] = True
+                            
+                            # Capture license plate
+                            plate_success, plate_error = self.capture_license_plate(
+                                frame, slot_id, car_id, det["bbox"]
+                            )
+                            if plate_success:
+                                curr["plate_captured"] = True
                             break
 
         self.last_statuses = current_statuses
         return current_statuses
 
     def clear_captured(self):
-        """Clear captured vehicle tracking."""
+        """Clear captured vehicle and plate tracking."""
         self.captured_vehicles = {}
+        self.captured_plates = {}
         self.last_statuses = []
 
     def clear_all(self):
