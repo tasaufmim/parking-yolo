@@ -25,6 +25,7 @@ class VideoProcessor:
     def set_plate_ocr(self, plate_ocr):
         self.plate_ocr = plate_ocr
         if self.roi_manager:
+            self.roi_manager.set_plate_ocr_instance(plate_ocr)
             self.roi_manager.set_plate_ocr_callback(
                 lambda img, sid, cid, f: self._queue_ocr(img, sid, cid, f)
             )
@@ -114,6 +115,7 @@ class VideoProcessor:
         self.slot_statuses = self.roi_manager.check_and_capture(frame, self.detections, raw_statuses)
         frame = self.detector.draw_detections(frame, self.detections)
         frame = self.roi_manager.draw_rois(frame, self.slot_statuses)
+        frame = self.roi_manager.draw_plate_overlay(frame, self.slot_statuses)
         return frame, self.slot_statuses
 
     def get_snapshot(self) -> np.ndarray | None:

@@ -19,12 +19,17 @@ class ROIManager:
         self.last_snapshot_error: str | None = None
         self.license_plate_detector = None
         self.plate_ocr_callback = None
+        self.plate_ocr_instance = None
         self._init_license_plate_detector()
         self.load()
 
     def set_plate_ocr_callback(self, callback):
         """Set callback for async plate OCR."""
         self.plate_ocr_callback = callback
+
+    def set_plate_ocr_instance(self, plate_ocr):
+        """Set plate OCR instance for accessing results."""
+        self.plate_ocr_instance = plate_ocr
 
     def _init_license_plate_detector(self):
         """Initialize license plate detector."""
@@ -123,6 +128,13 @@ class ROIManager:
         if enhanced_plate is None:
             return False, "No license plate detected", None
 
+        if plate_bbox:
+            abs_x1 = x1_p + plate_bbox[0]
+            abs_y1 = y1_p + plate_bbox[1]
+            abs_x2 = x1_p + plate_bbox[2]
+            abs_y2 = y1_p + plate_bbox[3]
+            plate_bbox = [abs_x1, abs_y1, abs_x2, abs_y2]
+
         now = datetime.now()
         timestamp = now.strftime("%y%m%d_%H%M%S")
         filename = f"{timestamp}_{slot_id}_{car_id}_licenseplate.jpg"
@@ -134,6 +146,7 @@ class ROIManager:
                 self.captured_plates[capture_key] = {
                     "filepath": filepath,
                     "captured_at": now.isoformat(),
+                    "plate_bbox": plate_bbox,
                 }
                 return True, "", enhanced_plate
             else:
@@ -342,6 +355,50 @@ class ROIManager:
             cx, cy = slot["centroid"]
             cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
             cv2.putText(frame, label, (cx - 20, cy - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        return frame
+
+    def draw_plate_overlay(self, frame: np.ndarray, slot_statuses: list[dict] | None = None) -> np.ndarray:
+        """Draw license plate text and bbox on frame."""
+        if not slot_statuses:
+            return frame
+        
+        for slot in self.slots:
+            slot_id = slot["id"]
+            status = next((s for s in slot_statuses if s["id"] == slot_id), None)
+            
+            if not status or not status.get("occupied"):
+                continue
+            
+            car_id = status.get("car_id")
+            if not car_id:
+                continue
+            
+            capture_key = f"{slot_id}_{car_id}"
+            plate_data = self.captured_plates.get(capture_key, {})
+            plate_bbox = plate_data.get("plate_bbox")
+            
+            if not plate_bbox:
+                continue
+            
+            x1, y1, x2, y2 = plate_bbox
+            h, w = frame.shape[:2]
+            x1 = max(0, x1)
+            y1 = max(0, y1)
+            x2 = min(w, x2)
+            y2 = min(h, y2)
+            
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
+            
+            plate_text = ""
+            if self.plate_ocr_instance:
+                plate_result = self.plate_ocr_instance.get_result(slot_id, car_id)
+                plate_text = plate_result.get("plate_text", "")
+            
+            if plate_text and plate_text not in ["N/A", "Error", "Timeout", "processing"]:
+                text_bg_y1 = max(0, y1 - 20)
+                cv2.rectangle(frame, (x1, text_bg_y1), (x1 + len(plate_text) * 12, y1), (0, 255, 255), -1)
+                cv2.putText(frame, plate_text, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+        
         return frame
 
     def save(self):
