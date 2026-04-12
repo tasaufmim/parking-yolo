@@ -36,8 +36,7 @@ class VideoProcessor:
     def _on_ocr_complete(self, slot_id, car_id, ocr_result):
         """Called when OCR completes - create history entry."""
         if self.roi_manager and self.roi_manager.history_manager:
-            capture_info = self.roi_manager.captured_vehicles.get(f"{slot_id}_{car_id}", {})
-            frame_path = capture_info.get("filepath")
+            frame_path = self.roi_manager.last_capture_path
             self.roi_manager.history_manager.start_parking(slot_id, car_id, frame_path, ocr_result)
     
     def _queue_ocr(self, plate_image, slot_id, car_id, image_filename):

@@ -22,6 +22,7 @@ class ROIManager:
         self.plate_ocr_instance = None
         self.history_manager = None
         self.on_ocr_complete = None
+        self.last_capture_path = None
         self._init_license_plate_detector()
         self.load()
 
@@ -102,6 +103,7 @@ class ROIManager:
                     "captured_at": now.isoformat(),
                     "detection_bbox": detection_bbox,
                 }
+                self.last_capture_path = filepath
                 self.last_snapshot_error = None
                 return True, ""
             else:
@@ -221,13 +223,24 @@ class ROIManager:
             # Handle slot becoming free
             if was_confirmed and not is_confirmed:
                 last_car_id = last.get("car_id")
-                # Check if history entry exists for this car/slot
                 if last_car_id and self.history_manager:
+                    # Check parking duration - skip if less than 60 seconds
                     existing = self.history_manager.get_by_car_id_slot(last_car_id, slot_id)
                     if not existing:
-                        # No OCR completed - create fallback entry with N/A
+                        # Check if parking was short (< 60 seconds) - skip entry
                         capture_info = self.captured_vehicles.get(f"{slot_id}_{last_car_id}", {})
-                        frame_path = capture_info.get("filepath")
+                        captured_at = capture_info.get("captured_at")
+                        if captured_at:
+                            park_time = datetime.fromisoformat(captured_at)
+                            duration_sec = (datetime.now() - park_time).total_seconds()
+                            if duration_sec < 60:
+                                print(f"[History] Skipping short parking {last_car_id} ({duration_sec:.0f}s)")
+                                # Still end the tracking but don't create entry
+                                self.last_statuses = current_statuses
+                                return current_statuses
+                        
+                        # No OCR completed - create fallback entry with N/A
+                        frame_path = capture_info.get("filepath") or self.last_capture_path
                         self.history_manager.start_parking(slot_id, last_car_id, frame_path, None)
                     # End parking
                     self.history_manager.end_parking(slot_id, last_car_id)

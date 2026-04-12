@@ -297,6 +297,7 @@ async def clear_history():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
+app.mount("/logs", StaticFiles(directory="logs"), name="logs")
 
 
 if __name__ == "__main__":

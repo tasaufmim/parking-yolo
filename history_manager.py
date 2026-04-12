@@ -335,6 +335,10 @@ class HistoryManager:
         if not entry:
             return False
         
+        # Can't retry while still parking
+        if entry.get("status") == "active":
+            return False
+        
         if not entry.get("car_photo_path"):
             return False
         
@@ -349,7 +353,6 @@ class HistoryManager:
                 pass
         
         retry_status = entry.get("retry_status")
-        retry_count = entry.get("retry_count", 0)
         
         if retry_status == "pending":
             return False

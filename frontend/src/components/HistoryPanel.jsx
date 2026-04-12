@@ -54,7 +54,6 @@ export default function HistoryPanel() {
   const [retrying, setRetrying] = useState(null);
   const perPage = PER_PAGE_OPTIONS[0];
   const refreshInterval = useRef(null);
-  const [, forceUpdate] = useState(0);
 
   const fetchData = useCallback(async (page = 1) => {
     setLoading(true);
@@ -71,7 +70,7 @@ export default function HistoryPanel() {
     fetchData(1);
     // Refresh every 10 seconds for live duration
     refreshInterval.current = setInterval(() => {
-      forceUpdate(n => n + 1);
+      fetchData(data.page);
     }, 10000);
     return () => {
       if (refreshInterval.current) clearInterval(refreshInterval.current);
