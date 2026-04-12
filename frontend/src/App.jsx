@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Upload, message } from "antd";
-import { InboxOutlined, VideoCameraOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { InboxOutlined, VideoCameraOutlined, FolderOpenOutlined, HistoryOutlined } from "@ant-design/icons";
 import VideoPlayer from "./components/VideoPlayer";
 import ROIControls from "./components/ROIControls";
 import StatusPanel from "./components/StatusPanel";
 import RTSPInput from "./components/RTSPInput";
+import HistoryPanel from "./components/HistoryPanel";
 import { uploadVideo, getResolution, saveROI, clearROIs, getStatus, connectRTSP, disconnectStream } from "./utils/api";
 
 const MODE = { IDLE: 0, MANUAL: 1, AUTO: 2 };
@@ -19,7 +20,7 @@ export default function App() {
   const [status, setStatus] = useState({ slots: [], total: 0, free: 0, occupied: 0, connected: false, source: null });
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [sourceMode, setSourceMode] = useState("upload"); // "upload" | "rtsp"
+  const [sourceMode, setSourceMode] = useState("upload"); // "upload" | "rtsp" | "history"
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const statusInterval = useRef(null);
@@ -141,6 +142,7 @@ export default function App() {
   const tabs = [
     { key: "upload", label: "Upload Video", icon: <FolderOpenOutlined /> },
     { key: "rtsp", label: "RTSP Live Stream", icon: <VideoCameraOutlined /> },
+    { key: "history", label: "History", icon: <HistoryOutlined /> },
   ];
 
   return (
@@ -181,46 +183,50 @@ export default function App() {
               <p className="ant-upload-hint">Supports MP4, AVI, MOV, MKV</p>
             </Upload.Dragger>
           </div>
-        ) : (
+        ) : sourceMode === "rtsp" ? (
           <RTSPInput
             onConnect={handleRTSPConnect}
             onDisconnect={handleRTSPDisconnect}
             connecting={connecting}
             connected={connected}
           />
+        ) : (
+          <HistoryPanel />
         )}
       </div>
 
-      <div className="main-area">
-        <div className="video-section">
-          <VideoPlayer
-            streamUrl={streamUrl}
-            videoWidth={videoWidth}
-            videoHeight={videoHeight}
-            drawMode={drawMode}
-            currentPoints={currentPoints}
-            onPointsChange={setCurrentPoints}
-            onSlotGenerated={handleSlotGenerated}
-            slotCount={slotCount}
-          />
-        </div>
+      {sourceMode !== "history" && (
+        <div className="main-area">
+          <div className="video-section">
+            <VideoPlayer
+              streamUrl={streamUrl}
+              videoWidth={videoWidth}
+              videoHeight={videoHeight}
+              drawMode={drawMode}
+              currentPoints={currentPoints}
+              onPointsChange={setCurrentPoints}
+              onSlotGenerated={handleSlotGenerated}
+              slotCount={slotCount}
+            />
+          </div>
 
-        <div className="controls-section">
-          <ROIControls
-            drawMode={drawMode}
-            setDrawMode={(m) => {
-              setDrawMode(m);
-              setCurrentPoints([]);
-            }}
-            slotCount={slotCount}
-            setSlotCount={setSlotCount}
-            onSaveManual={handleSaveManual}
-            onClear={handleClear}
-            disabled={!streamUrl}
-          />
-          <StatusPanel status={status} />
+          <div className="controls-section">
+            <ROIControls
+              drawMode={drawMode}
+              setDrawMode={(m) => {
+                setDrawMode(m);
+                setCurrentPoints([]);
+              }}
+              slotCount={slotCount}
+              setSlotCount={setSlotCount}
+              onSaveManual={handleSaveManual}
+              onClear={handleClear}
+              disabled={!streamUrl}
+            />
+            <StatusPanel status={status} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

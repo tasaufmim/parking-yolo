@@ -19,6 +19,7 @@ from detector import CarDetector
 from video_processor import VideoProcessor
 from roi_manager import ROIManager
 from plate_ocr import PlateOCR
+from history_manager import HistoryManager
 
 app = FastAPI(title="Parking Management MVP")
 
@@ -26,12 +27,15 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 roi_manager = ROIManager()
+history_manager = HistoryManager()
 detector: CarDetector | None = None
 processor: VideoProcessor | None = None
 current_video_path: str | None = None
 
 plate_ocr = PlateOCR()
 bg_tasks = []
+
+roi_manager.set_history_manager(history_manager)
 
 
 class ROIRequest(BaseModel):
@@ -198,7 +202,101 @@ async def get_status():
     }
 
 
+@app.get("/history")
+async def get_history(page: int = 1, per_page: int = 100, status: str = None):
+    return history_manager.get_history(page, per_page or 100, status)
+
+
+@app.get("/history/{sl}")
+async def get_history_detail(sl: int):
+    entry = history_manager.get_by_sl(sl)
+    if not entry:
+        raise HTTPException(404, "Entry not found")
+    return entry
+
+
+@app.post("/history/{sl}/retry")
+async def retry_ocr(sl: int):
+    entry = history_manager.get_by_sl(sl)
+    if not entry:
+        raise HTTPException(404, "Entry not found")
+    
+    if not history_manager.can_retry(sl):
+        raise HTTPException(400, "Retry not available for this entry")
+    
+    history_manager.update_retry_status(sl, "pending")
+    
+    try:
+        image = history_manager.get_car_photo(sl)
+        if image is None:
+            history_manager.update_retry_status(sl, "failed", increment_count=True)
+            raise HTTPException(400, "No car photo available")
+        
+        result = await plate_ocr.analyze_async(
+            image, 
+            entry["slot_id"], 
+            entry["car_id"],
+            entry.get("car_photo_path")
+        )
+        
+        updated = history_manager.update_ocr_result(sl, result)
+        history_manager.update_retry_status(sl, "success", increment_count=True)
+        
+        return updated
+    except Exception as e:
+        history_manager.update_retry_status(sl, "failed", increment_count=True)
+        raise HTTPException(500, str(e))
+
+
+@app.get("/history/export")
+async def export_history():
+    import csv
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    writer.writerow([
+        "SL", "Slot ID", "Car ID", "License Plate", "Plate Color",
+        "Text Color", "Vehicle Type", "OCR Source", "Time Parked",
+        "Time Left", "Duration (min)", "Status"
+    ])
+    
+    data = history_manager.get_history(page=1, per_page=100000)
+    for entry in data["entries"]:
+        writer.writerow([
+            entry["sl"],
+            entry["slot_id"],
+            entry["car_id"],
+            entry.get("plate_number", "N/A"),
+            entry.get("plate_color", "N/A"),
+            entry.get("text_color", "N/A"),
+            entry.get("vehicle_type", "N/A"),
+            entry.get("ocr_source", "N/A"),
+            entry.get("time_parked", "N/A"),
+            entry.get("time_left", "N/A"),
+            entry.get("duration_minutes", "N/A"),
+            entry["status"]
+        ])
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=parking_history.csv"}
+    )
+
+
+@app.delete("/history")
+async def clear_history():
+    history_manager.clear_history()
+    return {"message": "History cleared"}
+
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
 
 
 if __name__ == "__main__":

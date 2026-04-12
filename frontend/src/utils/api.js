@@ -58,3 +58,40 @@ export async function getStatus() {
   const res = await fetch("/status");
   return res.json();
 }
+
+export async function getHistory(page = 1, perPage = 100, status = null) {
+  const params = new URLSearchParams({ page, per_page: perPage });
+  if (status) params.append("status", status);
+  const res = await fetch(`/history?${params}`);
+  return res.json();
+}
+
+export async function getHistoryDetail(sl) {
+  const res = await fetch(`/history/${sl}`);
+  return res.json();
+}
+
+export async function retryOCR(sl) {
+  const res = await fetch(`/history/${sl}/retry`, { method: "POST" });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Retry failed");
+  }
+  return res.json();
+}
+
+export async function exportHistory() {
+  const res = await fetch("/history/export");
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "parking_history.csv";
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function clearHistory() {
+  const res = await fetch("/history", { method: "DELETE" });
+  return res.json();
+}

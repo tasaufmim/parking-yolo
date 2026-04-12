@@ -29,6 +29,16 @@ class VideoProcessor:
             self.roi_manager.set_plate_ocr_callback(
                 lambda img, sid, cid, f: self._queue_ocr(img, sid, cid, f)
             )
+            self.roi_manager.set_on_ocr_complete(
+                lambda sid, cid, result: self._on_ocr_complete(sid, cid, result)
+            )
+    
+    def _on_ocr_complete(self, slot_id, car_id, ocr_result):
+        """Called when OCR completes - create history entry."""
+        if self.roi_manager and self.roi_manager.history_manager:
+            capture_info = self.roi_manager.captured_vehicles.get(f"{slot_id}_{car_id}", {})
+            frame_path = capture_info.get("filepath")
+            self.roi_manager.history_manager.start_parking(slot_id, car_id, frame_path, ocr_result)
     
     def _queue_ocr(self, plate_image, slot_id, car_id, image_filename):
         if self.plate_ocr and plate_image is not None:
@@ -40,9 +50,24 @@ class VideoProcessor:
             thread.start()
     
     def _run_async_ocr(self, plate_image, slot_id, car_id, image_filename):
-        asyncio.run(
-            self.plate_ocr.analyze_async(plate_image, slot_id, car_id, image_filename)
-        )
+        try:
+            result = asyncio.run(
+                self.plate_ocr.analyze_async(plate_image, slot_id, car_id, image_filename)
+            )
+            # Call on_ocr_complete when OCR finishes (success or fail)
+            if self.roi_manager and hasattr(self.roi_manager, 'on_ocr_complete') and self.roi_manager.on_ocr_complete:
+                self.roi_manager.on_ocr_complete(slot_id, car_id, result)
+        except Exception as e:
+            print(f"OCR error: {e}")
+            # Call with error result to trigger history entry with N/A
+            if self.roi_manager and hasattr(self.roi_manager, 'on_ocr_complete') and self.roi_manager.on_ocr_complete:
+                error_result = {
+                    "plate_text": "N/A",
+                    "plate_color": "N/A", 
+                    "text_color": "N/A",
+                    "source": "error"
+                }
+                self.roi_manager.on_ocr_complete(slot_id, car_id, error_result)
 
     def start(self):
         self.cap = cv2.VideoCapture(self.source)

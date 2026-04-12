@@ -20,6 +20,8 @@ class ROIManager:
         self.license_plate_detector = None
         self.plate_ocr_callback = None
         self.plate_ocr_instance = None
+        self.history_manager = None
+        self.on_ocr_complete = None
         self._init_license_plate_detector()
         self.load()
 
@@ -30,6 +32,14 @@ class ROIManager:
     def set_plate_ocr_instance(self, plate_ocr):
         """Set plate OCR instance for accessing results."""
         self.plate_ocr_instance = plate_ocr
+    
+    def set_history_manager(self, history_manager):
+        """Set history manager for tracking parking events."""
+        self.history_manager = history_manager
+    
+    def set_on_ocr_complete(self, callback):
+        """Set callback to be called when OCR completes (success or fail)."""
+        self.on_ocr_complete = callback
 
     def _init_license_plate_detector(self):
         """Initialize license plate detector."""
@@ -189,6 +199,7 @@ class ROIManager:
                 if car_id:
                     for det in detections:
                         if det.get("car_id") == car_id:
+                            # Capture vehicle snapshot (for history photo)
                             success, error = self.capture_snapshot(
                                 frame, slot_id, car_id, det["bbox"]
                             )
@@ -201,12 +212,25 @@ class ROIManager:
                             )
                             if plate_success:
                                 curr["plate_captured"] = True
-                                # Queue async OCR if callback is set
                                 if self.plate_ocr_callback and plate_image is not None:
                                     now = datetime.now()
                                     filename = f"{now.strftime('%y%m%d_%H%M%S')}_{slot_id}_{car_id}_licenseplate.jpg"
                                     self.plate_ocr_callback(plate_image, slot_id, car_id, filename)
                             break
+            
+            # Handle slot becoming free
+            if was_confirmed and not is_confirmed:
+                last_car_id = last.get("car_id")
+                # Check if history entry exists for this car/slot
+                if last_car_id and self.history_manager:
+                    existing = self.history_manager.get_by_car_id_slot(last_car_id, slot_id)
+                    if not existing:
+                        # No OCR completed - create fallback entry with N/A
+                        capture_info = self.captured_vehicles.get(f"{slot_id}_{last_car_id}", {})
+                        frame_path = capture_info.get("filepath")
+                        self.history_manager.start_parking(slot_id, last_car_id, frame_path, None)
+                    # End parking
+                    self.history_manager.end_parking(slot_id, last_car_id)
 
         self.last_statuses = current_statuses
         return current_statuses
