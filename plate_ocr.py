@@ -1,5 +1,5 @@
 """
-License Plate OCR using Gemini API
+License Plate OCR using OpenAI API
 """
 import os
 import base64
@@ -14,8 +14,8 @@ import numpy as np
 
 class PlateOCR:
     def __init__(self, api_key: str = None):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.model = "gemini-2.5-flash-lite"
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.model = "gpt-4o"
         self.colors_plate = ["white", "yellow", "black", "blue", "green", "red"]
         self.colors_text = ["black", "white", "yellow"]
         self.results = {}
@@ -55,7 +55,7 @@ class PlateOCR:
     
     async def analyze_async(self, plate_image, slot_id: str, car_id: str, image_filename: str = None):
         if not self.api_key:
-            print("GEMINI_API_KEY not set")
+            print("OPENAI_API_KEY not set")
             return None
         
         key = f"{slot_id}_{car_id}"
@@ -86,32 +86,33 @@ class PlateOCR:
 Respond ONLY in this exact JSON format (no other text):
 {"text": "PLATENUMBER", "plate_color": "COLOR", "text_color": "COLOR"}"""
 
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
-            headers = {"Content-Type": "application/json"}
+            url = "https://api.openai.com/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
             payload = {
-                "contents": [{
-                    "parts": [
-                        {"text": prompt},
-                        {"inline_data": {"mime_type": "image/jpeg", "data": image_b64}}
+                "model": self.model,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
                     ]
                 }],
-                "generationConfig": {
-                    "temperature": 0.1,
-                    "maxOutputTokens": 100
-                }
+                "max_tokens": 100
             }
             
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     url,
-                    params={"key": self.api_key},
                     json=payload,
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=15)
                 ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                        text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
                         
                         try:
                             result_data = json.loads(text.strip().replace("```json", "").replace("```", ""))

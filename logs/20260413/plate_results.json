@@ -2,28 +2,28 @@
   {
     "slot_id": "P3",
     "car_id": "CAR260413001",
-    "plate_text": "KA03MW9473",
+    "plate_text": "KA03MN9473",
     "plate_color": "white",
     "text_color": "black",
-    "timestamp": "2026-04-13T00:02:17.426294",
-    "image_file": "260413_000214_P3_CAR260413001_licenseplate.jpg"
+    "timestamp": "2026-04-13T00:15:19.257575",
+    "image_file": "260413_001517_P3_CAR260413001_licenseplate.jpg"
   },
   {
     "slot_id": "P4",
     "car_id": "CAR260413004",
-    "plate_text": "KA01HK4717",
+    "plate_text": "KAO1HK4717",
     "plate_color": "white",
     "text_color": "black",
-    "timestamp": "2026-04-13T00:04:43.039520",
-    "image_file": "260413_000437_P4_CAR260413004_licenseplate.jpg"
+    "timestamp": "2026-04-13T00:17:25.664408",
+    "image_file": "260413_001723_P4_CAR260413004_licenseplate.jpg"
   },
   {
     "slot_id": "P1",
     "car_id": "CAR260413005",
-    "plate_text": "XA01XY B670",
+    "plate_text": "KA01MB670",
     "plate_color": "white",
     "text_color": "black",
-    "timestamp": "2026-04-13T00:04:46.214826",
-    "image_file": "260413_000443_P1_CAR260413005_licenseplate.jpg"
+    "timestamp": "2026-04-13T00:17:30.460032",
+    "image_file": "260413_001727_P1_CAR260413005_licenseplate.jpg"
   }
 ]
