@@ -38,6 +38,7 @@ static/assets/
 # Environment
 .env
 .env.local
+parking_history.db
 
 # YOLO models (large files)
 *.pt
