@@ -15,6 +15,7 @@ class VideoProcessor:
         self.running = False
         self.connected = False
         self.slot_statuses: list[dict] = []
+        self.detections: list[dict] = []
         self.frame_width = 0
         self.frame_height = 0
 
@@ -24,12 +25,14 @@ class VideoProcessor:
             raise ValueError(f"Cannot open source: {self.source}")
         self.frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.detector.reset_tracking()
         self.connected = True
         self.running = True
 
     def stop(self):
         self.running = False
         self.connected = False
+        self.detector.reset_tracking()
         if self.cap:
             self.cap.release()
             self.cap = None
@@ -81,9 +84,9 @@ class VideoProcessor:
         return frame
 
     def process_frame(self, frame: np.ndarray) -> tuple[np.ndarray, list[dict]]:
-        detections = self.detector.detect(frame)
-        self.slot_statuses = self.roi_manager.check_occupancy(detections)
-        frame = self.detector.draw_detections(frame, detections)
+        self.detections = self.detector.detect(frame)
+        self.slot_statuses = self.roi_manager.check_occupancy(self.detections)
+        frame = self.detector.draw_detections(frame, self.detections)
         frame = self.roi_manager.draw_rois(frame, self.slot_statuses)
         return frame, self.slot_statuses
 

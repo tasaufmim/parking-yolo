@@ -1,8 +1,8 @@
 import React from "react";
-import { CarOutlined } from "@ant-design/icons";
+import { CarOutlined, ClockCircleOutlined } from "@ant-design/icons";
 
 export default function StatusPanel({ status }) {
-  const { slots = [], total = 0, free = 0, occupied = 0 } = status;
+  const { slots = [], total = 0, free = 0, occupied = 0, detected = 0 } = status;
 
   return (
     <div className="glass-panel status-panel">
@@ -24,6 +24,10 @@ export default function StatusPanel({ status }) {
           <span className="stat-value">{occupied}</span>
           <span className="stat-label">Occupied</span>
         </div>
+        <div className="stat-box detected">
+          <span className="stat-value">{detected}</span>
+          <span className="stat-label">Detected</span>
+        </div>
       </div>
 
       <div className="slot-list">
@@ -35,11 +39,20 @@ export default function StatusPanel({ status }) {
           slots.map((slot) => (
             <div
               key={slot.id}
-              className={`slot-item ${slot.occupied ? "occupied" : "free"}`}
+              className={`slot-item ${slot.occupied ? "occupied" : "free"} ${slot.pending ? "pending" : ""}`}
             >
               <span className="slot-id">{slot.id}</span>
               <span className="slot-status">
-                {slot.occupied ? "OCCUPIED" : "FREE"}
+                {slot.pending ? (
+                  <span className="pending-status">
+                    <ClockCircleOutlined style={{ marginRight: 4 }} />
+                    {Math.ceil(slot.remaining_seconds)}s
+                  </span>
+                ) : slot.occupied ? (
+                  slot.car_id || "OCCUPIED"
+                ) : (
+                  "FREE"
+                )}
               </span>
             </div>
           ))

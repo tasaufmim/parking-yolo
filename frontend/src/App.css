@@ -219,6 +219,15 @@ body {
   color: #cf1322;
 }
 
+.stat-box.detected {
+  background: rgba(26, 86, 219, 0.08);
+  border: 1px solid rgba(26, 86, 219, 0.2);
+}
+
+.stat-box.detected .stat-value {
+  color: #1a56db;
+}
+
 .slot-list {
   display: flex;
   flex-direction: column;
@@ -245,6 +254,22 @@ body {
 .slot-item.occupied {
   background: rgba(207, 19, 34, 0.06);
   border: 1px solid rgba(207, 19, 34, 0.15);
+}
+
+.slot-item.pending {
+  background: rgba(255, 165, 0, 0.08);
+  border: 1px solid rgba(255, 165, 0, 0.25);
+}
+
+.pending-status {
+  color: #d46b08;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.slot-item.pending .slot-status {
+  color: #d46b08;
 }
 
 .slot-id {
