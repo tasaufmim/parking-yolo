@@ -1,6 +1,7 @@
 import json
 import os
 import time
+from datetime import datetime
 import numpy as np
 import cv2
 
@@ -12,7 +13,118 @@ class ROIManager:
     def __init__(self):
         self.slots: list[dict] = []
         self.slot_tracking: dict[str, dict] = {}
+        self.captured_vehicles: dict[str, dict] = {}
+        self.last_statuses: list[dict] = []
+        self.last_snapshot_error: str | None = None
         self.load()
+
+    def _get_snapshot_path(self) -> str:
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d")
+        path = os.path.join("logs", date_str, "snapshots", "vehicles")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def capture_snapshot(
+        self, frame: np.ndarray, slot_id: str, car_id: str, detection_bbox: list[int]
+    ) -> tuple[bool, str]:
+        """Capture snapshot of vehicle. Returns (success, error_message)."""
+        capture_key = f"{slot_id}_{car_id}"
+
+        if capture_key in self.captured_vehicles:
+            return False, f"{car_id} already captured in {slot_id}"
+
+        x1, y1, x2, y2 = detection_bbox
+        pad = 10
+        h, w = frame.shape[:2]
+        x1_p = max(0, x1 - pad)
+        y1_p = max(0, y1 - pad)
+        x2_p = min(w, x2 + pad)
+        y2_p = min(h, y2 + pad)
+
+        cropped = frame[y1_p:y2_p, x1_p:x2_p]
+        if cropped.size == 0:
+            self.last_snapshot_error = f"Failed to crop {car_id}"
+            return False, self.last_snapshot_error
+
+        now = datetime.now()
+        timestamp = now.strftime("%y%m%d_%H%M%S")
+
+        class_lower = car_id.lower().split("#")[0]
+        filename = f"{timestamp}_{slot_id}_{class_lower}{car_id.split('#')[1] if '#' in car_id else car_id}.jpg"
+        filepath = os.path.join(self._get_snapshot_path(), filename)
+
+        try:
+            success = cv2.imwrite(filepath, cropped)
+            if success:
+                self.captured_vehicles[capture_key] = {
+                    "filepath": filepath,
+                    "captured_at": now.isoformat(),
+                }
+                self.last_snapshot_error = None
+                return True, ""
+            else:
+                self.last_snapshot_error = f"Failed to save {car_id}"
+                return False, self.last_snapshot_error
+        except Exception as e:
+            self.last_snapshot_error = f"Error saving {car_id}: {str(e)}"
+            return False, self.last_snapshot_error
+
+    def get_snapshot_error(self) -> str | None:
+        err = self.last_snapshot_error
+        self.last_snapshot_error = None
+        return err
+
+    def is_already_captured(self, slot_id: str, car_id: str) -> bool:
+        capture_key = f"{slot_id}_{car_id}"
+        return capture_key in self.captured_vehicles
+
+    def check_and_capture(
+        self, frame: np.ndarray, detections: list[dict], current_statuses: list[dict]
+    ) -> list[dict]:
+        """Check for new confirmations and capture snapshots. Returns statuses with just_confirmed flag."""
+        if not self.last_statuses:
+            self.last_statuses = current_statuses
+            return current_statuses
+
+        current_dict = {s["id"]: s for s in current_statuses}
+        last_dict = {s["id"]: s for s in self.last_statuses}
+
+        for slot_id in current_dict:
+            curr = current_dict[slot_id]
+            last = last_dict.get(slot_id, {})
+
+            was_confirmed = last.get("occupied", False) and not last.get("pending", False)
+            is_confirmed = curr.get("occupied", False) and not curr.get("pending", False)
+
+            curr["just_confirmed"] = False
+
+            if is_confirmed and not was_confirmed:
+                curr["just_confirmed"] = True
+                car_id = curr.get("car_id")
+                if car_id:
+                    for det in detections:
+                        if det.get("car_id") == car_id:
+                            success, error = self.capture_snapshot(
+                                frame, slot_id, car_id, det["bbox"]
+                            )
+                            if success:
+                                curr["snapshot_captured"] = True
+                            break
+
+        self.last_statuses = current_statuses
+        return current_statuses
+
+    def clear_captured(self):
+        """Clear captured vehicle tracking."""
+        self.captured_vehicles = {}
+        self.last_statuses = []
+
+    def clear_all(self):
+        self.slots = []
+        self.slot_tracking = {}
+        self.clear_captured()
+        self.save()
 
     def add_slot(self, points: list[list[int]], slot_id: str | None = None) -> dict:
         if slot_id is None:

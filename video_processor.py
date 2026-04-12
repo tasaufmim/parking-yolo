@@ -26,6 +26,7 @@ class VideoProcessor:
         self.frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.detector.reset_tracking()
+        self.roi_manager.clear_captured()
         self.connected = True
         self.running = True
 
@@ -85,7 +86,8 @@ class VideoProcessor:
 
     def process_frame(self, frame: np.ndarray) -> tuple[np.ndarray, list[dict]]:
         self.detections = self.detector.detect(frame)
-        self.slot_statuses = self.roi_manager.check_occupancy(self.detections)
+        raw_statuses = self.roi_manager.check_occupancy(self.detections)
+        self.slot_statuses = self.roi_manager.check_and_capture(frame, self.detections, raw_statuses)
         frame = self.detector.draw_detections(frame, self.detections)
         frame = self.roi_manager.draw_rois(frame, self.slot_statuses)
         return frame, self.slot_statuses
@@ -106,6 +108,9 @@ class VideoProcessor:
             ret, frame = self.cap.read()
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
             return frame if ret else None
+
+    def get_snapshot_error(self) -> str | None:
+        return self.roi_manager.get_snapshot_error()
 
     def generate_mjpeg(self):
         """Generator that yields MJPEG frames with frame skip."""

@@ -144,10 +144,11 @@ async def get_roi():
 @app.get("/status")
 async def get_status():
     if not processor:
-        return {"slots": [], "total": 0, "occupied": 0, "free": 0, "detected": 0, "connected": False, "source": None}
+        return {"slots": [], "total": 0, "occupied": 0, "free": 0, "detected": 0, "connected": False, "source": None, "snapshot_error": None}
     statuses = processor.slot_statuses
     occupied = sum(1 for s in statuses if s["occupied"])
     detected = len(processor.detections) if processor.detections else 0
+    snapshot_error = processor.get_snapshot_error()
     return {
         "slots": statuses,
         "total": len(statuses),
@@ -156,6 +157,7 @@ async def get_status():
         "detected": detected,
         "connected": processor.connected,
         "source": "rtsp" if processor.is_rtsp else "file",
+        "snapshot_error": snapshot_error,
     }
 
 

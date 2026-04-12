@@ -1,6 +1,7 @@
 import torch
 import cv2
 import time
+from datetime import datetime
 from ultralytics import YOLO
 import numpy as np
 
@@ -34,6 +35,7 @@ class CarDetector:
         )
         detections = []
         current_time = time.time()
+        current_date = datetime.now().strftime("%y%m%d")
         active_track_ids = set()
 
         for r in results:
@@ -45,6 +47,7 @@ class CarDetector:
                 conf = float(box.conf[0])
                 track_id = int(box.id[0]) if box.id is not None else None
                 car_label = self.class_names.get(cls, f"cls_{cls}")
+                car_label_upper = car_label.upper()
 
                 if track_id is not None:
                     active_track_ids.add(track_id)
@@ -53,17 +56,19 @@ class CarDetector:
                         self.track_data[track_id] = {
                             "class": cls,
                             "car_label": car_label,
+                            "car_label_upper": car_label_upper,
                             "counter": self.car_counters[cls],
+                            "first_seen_date": current_date,
                             "last_seen": current_time,
                         }
                     else:
                         self.track_data[track_id]["last_seen"] = current_time
 
                     track_info = self.track_data[track_id]
-                    car_id = f"{track_info['car_label']}{track_info['counter']:03d}"
+                    car_id = f"{track_info['car_label_upper']}{track_info['first_seen_date']}{track_info['counter']:03d}"
                 else:
                     self.car_counters[cls] += 1
-                    car_id = f"{car_label}{self.car_counters[cls]:03d}"
+                    car_id = f"{car_label_upper}{current_date}{self.car_counters[cls]:03d}"
 
                 detections.append({
                     "bbox": [x1, y1, x2, y2],
@@ -83,6 +88,11 @@ class CarDetector:
 
     def reset_tracking(self):
         """Reset tracking for new video."""
+        self.car_counters = {2: 0, 5: 0, 7: 0}
+        self.track_data = {}
+
+    def clear_vehicles(self):
+        """Clear all vehicle tracking data."""
         self.car_counters = {2: 0, 5: 0, 7: 0}
         self.track_data = {}
 
