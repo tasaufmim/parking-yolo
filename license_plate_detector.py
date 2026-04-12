@@ -51,19 +51,8 @@ class LicensePlateDetector:
         return self._enhance(plate_crop), best["bbox"]
 
     def _enhance(self, plate_crop: np.ndarray) -> np.ndarray:
-        """CLAHE + 3x resize (keep color)"""
-        if len(plate_crop.shape) == 3 and plate_crop.shape[2] == 3:
-            lab = cv2.cvtColor(plate_crop, cv2.COLOR_BGR2LAB)
-            l, a, b = cv2.split(lab)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l = clahe.apply(l)
-            enhanced_lab = cv2.merge([l, a, b])
-            enhanced = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
-        else:
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            enhanced = clahe.apply(plate_crop)
-        
+        """3x resize only - no enhancement"""
         scale_factor = 3
-        new_h, new_w = enhanced.shape[:2]
-        enhanced = cv2.resize(enhanced, (new_w * scale_factor, new_h * scale_factor), interpolation=cv2.INTER_CUBIC)
+        new_h, new_w = plate_crop.shape[:2]
+        enhanced = cv2.resize(plate_crop, (new_w * scale_factor, new_h * scale_factor), interpolation=cv2.INTER_CUBIC)
         return enhanced

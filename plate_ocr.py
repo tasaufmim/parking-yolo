@@ -15,9 +15,9 @@ import numpy as np
 class PlateOCR:
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.model = "gpt-4o"
+        self.model = "gpt-4o-mini"
         self.colors_plate = ["white", "yellow", "black", "blue", "green", "red"]
-        self.colors_text = ["black", "white", "yellow"]
+        self.colors_text = ["black", "white", "yellow", "red", "green", "blue", "gold"]
         self.results = {}
         self.pending = set()
     
@@ -78,10 +78,23 @@ class PlateOCR:
         try:
             image_b64 = self._encode_image(plate_image)
             
-            prompt = """Analyze this license plate image and provide:
-1. License plate text (OCR) - just the characters visible on the plate
+            prompt = """Analyze this Indian license plate image and provide:
+1. License plate text (OCR) - exactly as shown on the plate
 2. License plate background color - one of: white, yellow, black, blue, green, red
-3. Text color on the plate - one of: black, white, yellow
+3. Text color on the plate - one of: black, white, yellow, red, green, blue, gold
+
+IMPORTANT INDIAN LICENSE PLATE FORMATS:
+- Standard: STATE_CODE RTO_CODE LETTERS NUM (e.g., DL01AB1234, MH12CD3456)
+- BH series: NUM BH NUM LETTERS (e.g., 01BH1234AB)
+- Commercial: STATE CODE NUM (e.g., TN 12 1234)
+- Diplomatic: NUMCD (e.g., 1234CD)
+- Army: STATE-NUM-NUM (e.g., HR-01-1234)
+- Electric: STATE-EV-NUM (e.g., DL-EV-1234)
+
+Indian State Codes (first 2 characters): 
+AN, AP, AR, AS, BR, CH, CG, DD, DL, DN, GA, GJ, HR, HP, JH, JK, KA, KL, LD, ML, MN, MP, MZ, NL, OD, PB, PN, PY, RJ, SK, TN, TR, TS, UK, UP, WB, MH
+
+Extract the exact text including spaces. If format is unclear, still extract visible characters.
 
 Respond ONLY in this exact JSON format (no other text):
 {"text": "PLATENUMBER", "plate_color": "COLOR", "text_color": "COLOR"}"""
