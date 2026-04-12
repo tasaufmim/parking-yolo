@@ -1,5 +1,7 @@
 import cv2
 import time
+import threading
+import asyncio
 import numpy as np
 from detector import CarDetector
 from roi_manager import ROIManager
@@ -18,6 +20,28 @@ class VideoProcessor:
         self.detections: list[dict] = []
         self.frame_width = 0
         self.frame_height = 0
+        self.plate_ocr = None
+    
+    def set_plate_ocr(self, plate_ocr):
+        self.plate_ocr = plate_ocr
+        if self.roi_manager:
+            self.roi_manager.set_plate_ocr_callback(
+                lambda img, sid, cid, f: self._queue_ocr(img, sid, cid, f)
+            )
+    
+    def _queue_ocr(self, plate_image, slot_id, car_id, image_filename):
+        if self.plate_ocr and plate_image is not None:
+            thread = threading.Thread(
+                target=self._run_async_ocr,
+                args=(plate_image, slot_id, car_id, image_filename)
+            )
+            thread.daemon = True
+            thread.start()
+    
+    def _run_async_ocr(self, plate_image, slot_id, car_id, image_filename):
+        asyncio.run(
+            self.plate_ocr.analyze_async(plate_image, slot_id, car_id, image_filename)
+        )
 
     def start(self):
         self.cap = cv2.VideoCapture(self.source)

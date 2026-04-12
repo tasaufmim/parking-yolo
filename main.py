@@ -1,7 +1,15 @@
 import os
 import uuid
+import asyncio
 import cv2
 import numpy as np
+from dotenv import load_dotenv
+from pathlib import Path
+
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +18,7 @@ from pydantic import BaseModel
 from detector import CarDetector
 from video_processor import VideoProcessor
 from roi_manager import ROIManager
+from plate_ocr import PlateOCR
 
 app = FastAPI(title="Parking Management MVP")
 
@@ -20,6 +29,9 @@ roi_manager = ROIManager()
 detector: CarDetector | None = None
 processor: VideoProcessor | None = None
 current_video_path: str | None = None
+
+plate_ocr = PlateOCR()
+bg_tasks = []
 
 
 class ROIRequest(BaseModel):
@@ -63,6 +75,7 @@ async def upload_video(file: UploadFile = File(...)):
     current_video_path = path
     d = get_detector()
     processor = VideoProcessor(path, d, roi_manager)
+    processor.set_plate_ocr(plate_ocr)
     processor.start()
 
     return {"message": "Video uploaded", "filename": filename, "source": "file"}
@@ -76,6 +89,7 @@ async def connect_rtsp(req: RTSPRequest):
     d = get_detector()
     try:
         processor = VideoProcessor(req.url, d, roi_manager)
+        processor.set_plate_ocr(plate_ocr)
         processor.start()
         return {"message": "Connected to RTSP stream", "source": "rtsp"}
     except ValueError as e:
@@ -149,8 +163,31 @@ async def get_status():
     occupied = sum(1 for s in statuses if s["occupied"])
     detected = len(processor.detections) if processor.detections else 0
     snapshot_error = processor.get_snapshot_error()
+    
+    enriched_statuses = []
+    for s in statuses:
+        slot_data = dict(s)
+        if s.get("car_id"):
+            plate_result = plate_ocr.get_result(s["id"], s["car_id"])
+            is_processing = plate_ocr.is_processing(s["id"], s["car_id"])
+            if is_processing:
+                slot_data["plate_status"] = "processing"
+            elif plate_result.get("plate_text") == "N/A" or plate_result.get("plate_text") in ["Error", "Timeout"]:
+                slot_data["plate_status"] = "N/A"
+            else:
+                slot_data["plate_status"] = "ready"
+            slot_data["plate_text"] = plate_result.get("plate_text", "N/A")
+            slot_data["plate_color"] = plate_result.get("plate_color", "N/A")
+            slot_data["text_color"] = plate_result.get("text_color", "N/A")
+        else:
+            slot_data["plate_status"] = "N/A"
+            slot_data["plate_text"] = "N/A"
+            slot_data["plate_color"] = "N/A"
+            slot_data["text_color"] = "N/A"
+        enriched_statuses.append(slot_data)
+    
     return {
-        "slots": statuses,
+        "slots": enriched_statuses,
         "total": len(statuses),
         "occupied": occupied,
         "free": len(statuses) - occupied,

@@ -41,19 +41,33 @@ export default function StatusPanel({ status }) {
               key={slot.id}
               className={`slot-item ${slot.occupied ? "occupied" : "free"} ${slot.pending ? "pending" : ""}`}
             >
-              <span className="slot-id">{slot.id}</span>
-              <span className="slot-status">
-                {slot.pending ? (
-                  <span className="pending-status">
-                    <ClockCircleOutlined style={{ marginRight: 4 }} />
-                    {Math.ceil(slot.remaining_seconds)}s
+              <div className="slot-main-info">
+                <span className="slot-id">{slot.id}</span>
+                <span className="slot-status">
+                  {slot.pending ? (
+                    <span className="pending-status">
+                      <ClockCircleOutlined style={{ marginRight: 4 }} />
+                      {Math.ceil(slot.remaining_seconds)}s
+                    </span>
+                  ) : slot.occupied ? (
+                    slot.car_id || "OCCUPIED"
+                  ) : (
+                    "FREE"
+                  )}
+                </span>
+              </div>
+              {slot.occupied && slot.plate_text && slot.plate_text !== "N/A" && slot.plate_text !== "processing" && (
+                <div className="slot-plate-info">
+                  <span className="plate-text">
+                    {slot.plate_text} ({slot.plate_color}/{slot.text_color})
                   </span>
-                ) : slot.occupied ? (
-                  slot.car_id || "OCCUPIED"
-                ) : (
-                  "FREE"
-                )}
-              </span>
+                </div>
+              )}
+              {slot.occupied && slot.plate_status === "processing" && (
+                <div className="slot-plate-info processing">
+                  <span className="plate-text">Processing OCR...</span>
+                </div>
+              )}
             </div>
           ))
         )}

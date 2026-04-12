@@ -18,8 +18,13 @@ class ROIManager:
         self.last_statuses: list[dict] = []
         self.last_snapshot_error: str | None = None
         self.license_plate_detector = None
+        self.plate_ocr_callback = None
         self._init_license_plate_detector()
         self.load()
+
+    def set_plate_ocr_callback(self, callback):
+        """Set callback for async plate OCR."""
+        self.plate_ocr_callback = callback
 
     def _init_license_plate_detector(self):
         """Initialize license plate detector."""
@@ -93,14 +98,14 @@ class ROIManager:
 
     def capture_license_plate(
         self, frame: np.ndarray, slot_id: str, car_id: str, detection_bbox: list[int]
-    ) -> tuple[bool, str]:
-        """Capture license plate from vehicle. Returns (success, error_message)."""
+    ) -> tuple[bool, str, np.ndarray | None]:
+        """Capture license plate from vehicle. Returns (success, error_message, plate_image)."""
         if self.license_plate_detector is None:
-            return False, "License plate detector not initialized"
+            return False, "License plate detector not initialized", None
 
         capture_key = f"{slot_id}_{car_id}"
         if capture_key in self.captured_plates:
-            return False, f"License plate already captured for {car_id} in {slot_id}"
+            return False, f"License plate already captured for {car_id} in {slot_id}", None
 
         x1, y1, x2, y2 = detection_bbox
         pad = 10
@@ -112,11 +117,11 @@ class ROIManager:
 
         cropped_vehicle = frame[y1_p:y2_p, x1_p:x2_p]
         if cropped_vehicle.size == 0:
-            return False, "Failed to crop vehicle for plate detection"
+            return False, "Failed to crop vehicle for plate detection", None
 
         enhanced_plate, plate_bbox = self.license_plate_detector.get_best_plate(cropped_vehicle)
         if enhanced_plate is None:
-            return False, "No license plate detected"
+            return False, "No license plate detected", None
 
         now = datetime.now()
         timestamp = now.strftime("%y%m%d_%H%M%S")
@@ -130,11 +135,11 @@ class ROIManager:
                     "filepath": filepath,
                     "captured_at": now.isoformat(),
                 }
-                return True, ""
+                return True, "", enhanced_plate
             else:
-                return False, f"Failed to save license plate for {car_id}"
+                return False, f"Failed to save license plate for {car_id}", None
         except Exception as e:
-            return False, f"Error saving license plate: {str(e)}"
+            return False, f"Error saving license plate: {str(e)}", None
 
     def get_snapshot_error(self) -> str | None:
         err = self.last_snapshot_error
@@ -178,11 +183,16 @@ class ROIManager:
                                 curr["snapshot_captured"] = True
                             
                             # Capture license plate
-                            plate_success, plate_error = self.capture_license_plate(
+                            plate_success, plate_error, plate_image = self.capture_license_plate(
                                 frame, slot_id, car_id, det["bbox"]
                             )
                             if plate_success:
                                 curr["plate_captured"] = True
+                                # Queue async OCR if callback is set
+                                if self.plate_ocr_callback and plate_image is not None:
+                                    now = datetime.now()
+                                    filename = f"{now.strftime('%y%m%d_%H%M%S')}_{slot_id}_{car_id}_licenseplate.jpg"
+                                    self.plate_ocr_callback(plate_image, slot_id, car_id, filename)
                             break
 
         self.last_statuses = current_statuses

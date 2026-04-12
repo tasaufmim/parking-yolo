@@ -4,5 +4,5 @@ ultralytics
 opencv-python-headless
 python-multipart
 numpy
-paddlepaddle
-paddleocr
+aiohttp
+python-dotenv

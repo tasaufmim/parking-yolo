@@ -181,9 +181,10 @@ body {
 
 /* Status Panel */
 .status-summary {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .stat-box {
@@ -286,6 +287,28 @@ body {
 
 .slot-item.free .slot-status {
   color: #389e0d;
+}
+
+.slot-main-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.slot-plate-info {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+  padding-left: 4px;
+}
+
+.slot-plate-info.processing {
+  color: #1a56db;
+}
+
+.plate-text {
+  font-weight: 500;
 }
 
 .slot-item.occupied .slot-status {
