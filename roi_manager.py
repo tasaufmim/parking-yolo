@@ -6,7 +6,8 @@ import numpy as np
 import cv2
 
 DATA_FILE = "rois.json"
-DELAY_SECONDS = 15
+OCCUPY_DELAY_SECONDS = 30
+FREE_DELAY_SECONDS = 15
 
 
 class ROIManager:
@@ -344,7 +345,8 @@ class ROIManager:
 
                 if pending_start is not None:
                     elapsed = current_time - pending_start
-                    if elapsed >= DELAY_SECONDS:
+                    delay = OCCUPY_DELAY_SECONDS if tracking["pending_state"] else FREE_DELAY_SECONDS
+                    if elapsed >= delay:
                         tracking["confirmed_state"] = tracking["pending_state"]
                         tracking["pending_state"] = None
                         tracking["pending_start"] = None
@@ -357,7 +359,8 @@ class ROIManager:
 
             remaining = 0.0
             if pending_start is not None:
-                remaining = max(0, DELAY_SECONDS - (current_time - pending_start))
+                delay = OCCUPY_DELAY_SECONDS if tracking["pending_state"] else FREE_DELAY_SECONDS
+                remaining = max(0, delay - (current_time - pending_start))
 
             status.append({
                 "id": slot_id,

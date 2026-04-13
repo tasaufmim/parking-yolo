@@ -48,31 +48,37 @@ class HistoryManager:
     
     def _init_db(self):
         conn = sqlite3.connect(self.db_path)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS parking_history (
-                sl INTEGER PRIMARY KEY AUTOINCREMENT,
-                slot_id TEXT NOT NULL,
-                car_id TEXT NOT NULL,
-                plate_number TEXT,
-                plate_color TEXT,
-                text_color TEXT,
-                vehicle_type TEXT,
-                ocr_source TEXT,
-                car_photo_path TEXT,
-                time_parked TEXT NOT NULL,
-                time_left TEXT,
-                duration_minutes INTEGER,
-                status TEXT DEFAULT 'active',
-                retry_status TEXT DEFAULT 'none',
-                retry_count INTEGER DEFAULT 0,
-                retry_last_attempt TEXT,
-                retry_locked_until TEXT,
-                UNIQUE(slot_id, car_id, time_parked)
-            )
-        """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON parking_history(status)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_retry ON parking_history(retry_status)")
-        conn.commit()
+        
+        cursor = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='parking_history'"
+        )
+        if not cursor.fetchone():
+            conn.execute("""
+                CREATE TABLE parking_history (
+                    sl INTEGER PRIMARY KEY AUTOINCREMENT,
+                    slot_id TEXT NOT NULL,
+                    car_id TEXT NOT NULL,
+                    plate_number TEXT,
+                    plate_color TEXT,
+                    text_color TEXT,
+                    vehicle_type TEXT,
+                    ocr_source TEXT,
+                    car_photo_path TEXT,
+                    time_parked TEXT NOT NULL,
+                    time_left TEXT,
+                    duration_minutes INTEGER,
+                    status TEXT DEFAULT 'active',
+                    retry_status TEXT DEFAULT 'none',
+                    retry_count INTEGER DEFAULT 0,
+                    retry_last_attempt TEXT,
+                    retry_locked_until TEXT,
+                    UNIQUE(slot_id, car_id, time_parked)
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON parking_history(status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_retry ON parking_history(retry_status)")
+            conn.commit()
+        
         conn.close()
     
     def _get_connection(self):
