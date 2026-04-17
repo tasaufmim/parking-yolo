@@ -1,0 +1,101 @@
+[
+  {
+    "slot_id": "P3",
+    "car_id": "CAR260417001",
+    "plate_text": "KA03MN9",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:34:29.263750",
+    "image_file": "260417_223423_P3_CAR260417001_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P4",
+    "car_id": "CAR260417004",
+    "plate_text": "KAO1MK4717",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:36:34.370999",
+    "image_file": "260417_223631_P4_CAR260417004_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P1",
+    "car_id": "CAR260417005",
+    "plate_text": "XA01MY8670",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:36:38.165304",
+    "image_file": "260417_223634_P1_CAR260417005_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P4",
+    "car_id": "CAR260417008",
+    "plate_text": "KAO1MK4717",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:43:17.387353",
+    "image_file": "260417_224313_P4_CAR260417008_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P1",
+    "car_id": "CAR260417009",
+    "plate_text": "XA01HY867",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:43:19.445813",
+    "image_file": "260417_224316_P1_CAR260417009_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P4",
+    "car_id": "CAR260417012",
+    "plate_text": "KAO1MK4717",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:50:00.949316",
+    "image_file": "260417_224957_P4_CAR260417012_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P1",
+    "car_id": "CAR260417013",
+    "plate_text": "KAO1MY8670",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:50:04.564173",
+    "image_file": "260417_225001_P1_CAR260417013_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P4",
+    "car_id": "CAR260417016",
+    "plate_text": "KAO1MK4717",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:57:08.816581",
+    "image_file": "260417_225707_P4_CAR260417016_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Cannot connect to host api.openai.com:443 ssl:default [nodename nor servname provided, or not known]"
+  },
+  {
+    "slot_id": "P1",
+    "car_id": "CAR260417017",
+    "plate_text": "KA01MY8670",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-04-17T22:57:12.571860",
+    "image_file": "260417_225710_P1_CAR260417017_licenseplate.jpg",
+    "source": "paddleocr",
+    "fallback_reason": "Cannot connect to host api.openai.com:443 ssl:default [nodename nor servname provided, or not known]"
+  }
+]

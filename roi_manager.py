@@ -223,28 +223,16 @@ class ROIManager:
             
             # Handle slot becoming free
             if was_confirmed and not is_confirmed:
-                last_car_id = last.get("car_id")
+                # Use tracking dict which preserves car_id throughout
+                tracking_info = self.slot_tracking.get(slot_id, {})
+                last_car_id = tracking_info.get("car_id")
+                
+                print(f"[History] Slot {slot_id} becoming free, car_id: {last_car_id}")
+                
                 if last_car_id and self.history_manager:
-                    # Check parking duration - skip if less than 60 seconds
-                    existing = self.history_manager.get_by_car_id_slot(last_car_id, slot_id)
-                    if not existing:
-                        # Check if parking was short (< 60 seconds) - skip entry
-                        capture_info = self.captured_vehicles.get(f"{slot_id}_{last_car_id}", {})
-                        captured_at = capture_info.get("captured_at")
-                        if captured_at:
-                            park_time = datetime.fromisoformat(captured_at)
-                            duration_sec = (datetime.now() - park_time).total_seconds()
-                            if duration_sec < 60:
-                                print(f"[History] Skipping short parking {last_car_id} ({duration_sec:.0f}s)")
-                                # Still end the tracking but don't create entry
-                                self.last_statuses = current_statuses
-                                return current_statuses
-                        
-                        # No OCR completed - create fallback entry with N/A
-                        frame_path = capture_info.get("filepath") or self.last_capture_path
-                        self.history_manager.start_parking(slot_id, last_car_id, frame_path, None)
-                    # End parking
+                    # First, try to end any active parking for this car_id/slot
                     self.history_manager.end_parking(slot_id, last_car_id)
+                    print(f"[History] Updated {last_car_id} as completed")
 
         self.last_statuses = current_statuses
         return current_statuses
@@ -355,7 +343,6 @@ class ROIManager:
             final_car_id = confirmed_car_id
             if tracking["pending_state"] is not None:
                 final_occupied = tracking["confirmed_state"]
-                final_car_id = None
 
             remaining = 0.0
             if pending_start is not None:

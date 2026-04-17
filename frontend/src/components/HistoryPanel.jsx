@@ -282,78 +282,73 @@ export default function HistoryPanel() {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
-        width={600}
+        width={700}
       >
         {selectedEntry && (
-          <div className="detail-grid">
-            <div className="detail-row">
-              <span className="detail-label">SL:</span>
-              <span className="detail-value">{selectedEntry.sl}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Slot ID:</span>
-              <span className="detail-value">{selectedEntry.slot_id}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Car ID:</span>
-              <span className="detail-value">{selectedEntry.car_id}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">License Plate:</span>
-              <span className="detail-value">{selectedEntry.plate_number || "N/A"}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Plate Color:</span>
-              <span className="detail-value">{selectedEntry.plate_color || "N/A"}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Text Color:</span>
-              <span className="detail-value">{selectedEntry.text_color || "N/A"}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Vehicle Type:</span>
-              <span className="detail-value">{selectedEntry.vehicle_type || "Unknown"}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">OCR Source:</span>
-              <span className="detail-value">
-                {selectedEntry.ocr_source === "openai" ? "Primary" : 
-                 selectedEntry.ocr_source === "paddleocr" ? "Secondary" : 
-                 "N/A"}
-              </span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Time Parked:</span>
-              <span className="detail-value">{formatTime(selectedEntry.time_parked)}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Time Left:</span>
-              <span className="detail-value">{formatTime(selectedEntry.time_left)}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Duration:</span>
-              <span className="detail-value">{formatDuration(selectedEntry.duration_minutes)}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Status:</span>
-              <span className="detail-value">{selectedEntry.status}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Retry Status:</span>
-              <span className="detail-value">{selectedEntry.retry_status || "none"}</span>
-            </div>
+          <div style={{ display: "flex", gap: 24 }}>
             {selectedEntry.car_photo_path && (
-              <div className="detail-row">
-                <span className="detail-label">Car Photo:</span>
-                <span className="detail-value">
-                  <img 
-                    src={`/${selectedEntry.car_photo_path}`} 
-                    alt="Car" 
-                    style={{ maxWidth: 200, maxHeight: 150, marginTop: 8 }}
-                  />
-                </span>
+              <div style={{ flex: "0 0 70%", textAlign: "center" }}>
+                <img
+                  src={`/${selectedEntry.car_photo_path}`}
+                  alt="Car"
+                  style={{ maxWidth: "100%", maxHeight: 350, borderRadius: 8 }}
+                />
               </div>
             )}
+            <div className="detail-grid" style={{ flex: "0 0 30%" }}>
+              <div className="detail-row">
+                <span className="detail-label">Slot ID:</span>
+                <span className="detail-value">{selectedEntry.slot_id}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Car ID:</span>
+                <span className="detail-value">{selectedEntry.car_id}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">License Plate:</span>
+                <span className="detail-value">{selectedEntry.plate_number || "N/A"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Plate Color:</span>
+                <span className="detail-value">{selectedEntry.plate_color || "N/A"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Text Color:</span>
+                <span className="detail-value">{selectedEntry.text_color || "N/A"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Vehicle Type:</span>
+                <span className="detail-value">{selectedEntry.vehicle_type || "Unknown"}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">OCR Source:</span>
+                <span className="detail-value">
+                  {selectedEntry.ocr_source === "openai" ? "Primary" : 
+                   selectedEntry.ocr_source === "paddleocr" ? "Secondary" : 
+                   "N/A"}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Time Parked:</span>
+                <span className="detail-value">{formatTime(selectedEntry.time_parked)}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Time Left:</span>
+                <span className="detail-value">{formatTime(selectedEntry.time_left)}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Duration:</span>
+                <span className="detail-value">{formatDuration(selectedEntry.duration_minutes)}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Status:</span>
+                <span className="detail-value">{selectedEntry.status}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Retry Status:</span>
+                <span className="detail-value">{selectedEntry.retry_status || "none"}</span>
+              </div>
+            </div>
           </div>
         )}
       </Modal>
