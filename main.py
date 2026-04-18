@@ -50,7 +50,7 @@ class RTSPRequest(BaseModel):
 def get_detector():
     global detector
     if detector is None:
-        detector = CarDetector(confidence=0.5)
+        detector = CarDetector(confidence=0.8)
     return detector
 
 

@@ -75,14 +75,16 @@ class LicensePlateDetector:
         return enhanced, best["bbox"]
 
     def enhance_plate(self, plate_crop: np.ndarray) -> np.ndarray:
-        """Enhance license plate image for better readability."""
+        """Enhance license plate image for better readability while preserving color."""
         if len(plate_crop.shape) == 3 and plate_crop.shape[2] == 3:
-            gray = cv2.cvtColor(plate_crop, cv2.COLOR_BGR2GRAY)
+            lab = cv2.cvtColor(plate_crop, cv2.COLOR_BGR2LAB)
+            l, a, b = cv2.split(lab)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            l = clahe.apply(l)
+            enhanced = cv2.merge([l, a, b])
+            enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
         else:
-            gray = plate_crop
-        
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray)
+            enhanced = plate_crop
         
         scale_factor = 3
         new_h, new_w = enhanced.shape[:2] * scale_factor

@@ -199,6 +199,18 @@ class ROIManager:
             if is_confirmed and not was_confirmed:
                 curr["just_confirmed"] = True
                 car_id = curr.get("car_id")
+                
+                if was_confirmed:
+                    tracking_info = self.slot_tracking.get(slot_id, {})
+                    previous_car_id = tracking_info.get("car_id")
+                    if previous_car_id and previous_car_id != car_id:
+                        print(f"[Slot {slot_id}] Different car detected: {previous_car_id} -> {car_id}, ending previous session")
+                        if self.history_manager:
+                            self.history_manager.end_parking(slot_id, previous_car_id)
+                    else:
+                        print(f"[Slot {slot_id}] Already occupied - ignoring new car detection")
+                        continue
+                
                 if car_id:
                     for det in detections:
                         if det.get("car_id") == car_id:
@@ -312,7 +324,8 @@ class ROIManager:
                 }
                 self.slot_tracking[slot_id] = tracking
             else:
-                tracking["car_id"] = car_id
+                if car_id is not None:
+                    tracking["car_id"] = car_id
 
             confirmed_state = tracking["confirmed_state"]
             pending_state = tracking["pending_state"]
