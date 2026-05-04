@@ -282,20 +282,20 @@ export default function HistoryPanel() {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
-        width={700}
+        width={800}
       >
         {selectedEntry && (
           <div style={{ display: "flex", gap: 24 }}>
             {selectedEntry.car_photo_path && (
-              <div style={{ flex: "0 0 70%", textAlign: "center" }}>
+              <div style={{ flex: "0 0 40%", textAlign: "center" }}>
                 <img
                   src={`/${selectedEntry.car_photo_path}`}
                   alt="Car"
-                  style={{ maxWidth: "100%", maxHeight: 350, borderRadius: 8 }}
+                  style={{ maxWidth: "100%", maxHeight: 250, borderRadius: 8 }}
                 />
               </div>
             )}
-            <div className="detail-grid" style={{ flex: "0 0 30%" }}>
+            <div className="detail-grid" style={{ flex: 1 }}>
               <div className="detail-row">
                 <span className="detail-label">Slot ID:</span>
                 <span className="detail-value">{selectedEntry.slot_id}</span>

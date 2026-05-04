@@ -1,0 +1,50 @@
+[
+  {
+    "slot_id": "P4",
+    "car_id": "CAR260504002",
+    "plate_text": "N/A",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-05-04T16:51:03.793229",
+    "image_file": "260504_165101_P4_CAR260504002_licenseplate.jpg",
+    "source": "paddleocr",
+    "error": "PaddleOCR not available",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P1",
+    "car_id": "CAR260504004",
+    "plate_text": "N/A",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-05-04T16:51:07.988661",
+    "image_file": "260504_165105_P1_CAR260504004_licenseplate.jpg",
+    "source": "paddleocr",
+    "error": "PaddleOCR not available",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P4",
+    "car_id": "CAR260504002",
+    "plate_text": "N/A",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-05-04T16:55:40.021333",
+    "image_file": "260504_165537_P4_CAR260504002_licenseplate.jpg",
+    "source": "paddleocr",
+    "error": "PaddleOCR not available",
+    "fallback_reason": "Invalid API key"
+  },
+  {
+    "slot_id": "P1",
+    "car_id": "CAR260504004",
+    "plate_text": "N/A",
+    "plate_color": "N/A",
+    "text_color": "N/A",
+    "timestamp": "2026-05-04T16:55:44.071114",
+    "image_file": "260504_165541_P1_CAR260504004_licenseplate.jpg",
+    "source": "paddleocr",
+    "error": "PaddleOCR not available",
+    "fallback_reason": "Invalid API key"
+  }
+]

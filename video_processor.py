@@ -69,7 +69,9 @@ class VideoProcessor:
                 self.roi_manager.on_ocr_complete(slot_id, car_id, error_result)
 
     def start(self):
-        self.cap = cv2.VideoCapture(self.source)
+        import os
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+        self.cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
         if not self.cap.isOpened():
             raise ValueError(f"Cannot open source: {self.source}")
         self.frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -95,7 +97,9 @@ class VideoProcessor:
         if self.cap:
             self.cap.release()
         time.sleep(3)
-        self.cap = cv2.VideoCapture(self.source)
+        import os
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+        self.cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
         if self.cap.isOpened():
             self.connected = True
             print("Reconnected successfully")
