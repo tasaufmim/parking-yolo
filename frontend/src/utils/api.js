@@ -95,3 +95,56 @@ export async function clearHistory() {
   const res = await fetch("/history", { method: "DELETE" });
   return res.json();
 }
+
+export async function getCameras() {
+  const res = await fetch("/cameras");
+  return res.json();
+}
+
+export async function addCamera(name, rtsp_url) {
+  const res = await fetch("/cameras", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, rtsp_url }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Failed to add camera");
+  }
+  return res.json();
+}
+
+export async function updateCamera(id, name, rtsp_url) {
+  const res = await fetch(`/cameras/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, rtsp_url }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Failed to update camera");
+  }
+  return res.json();
+}
+
+export async function deleteCamera(id) {
+  const res = await fetch(`/cameras/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Failed to delete camera");
+  }
+  return res.json();
+}
+
+export async function toggleCameraEnabled(id, enabled) {
+  const res = await fetch(`/cameras/${id}/enable`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Failed to toggle camera");
+  }
+  return res.json();
+}

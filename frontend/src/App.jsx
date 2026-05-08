@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Upload, message } from "antd";
-import { InboxOutlined, VideoCameraOutlined, FolderOpenOutlined, HistoryOutlined } from "@ant-design/icons";
+import { InboxOutlined, VideoCameraOutlined, FolderOpenOutlined, HistoryOutlined, SettingOutlined } from "@ant-design/icons";
 import VideoPlayer from "./components/VideoPlayer";
 import ROIControls from "./components/ROIControls";
 import StatusPanel from "./components/StatusPanel";
 import RTSPInput from "./components/RTSPInput";
 import HistoryPanel from "./components/HistoryPanel";
+import CameraManager from "./components/CameraManager";
 import { uploadVideo, getResolution, saveROI, clearROIs, getStatus, connectRTSP, disconnectStream } from "./utils/api";
 
 const MODE = { IDLE: 0, MANUAL: 1, AUTO: 2 };
@@ -17,12 +18,13 @@ export default function App() {
   const [currentPoints, setCurrentPoints] = useState([]);
   const [videoWidth, setVideoWidth] = useState(0);
   const [videoHeight, setVideoHeight] = useState(0);
-  const [status, setStatus] = useState({ slots: [], total: 0, free: 0, occupied: 0, connected: false, source: null });
+  const [status, setStatus] = useState({ slots: [], total: 0, free: 0, occupied: 0, detected: 0, connected: false, source: null });
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [sourceMode, setSourceMode] = useState("upload"); // "upload" | "rtsp" | "history"
+  const [sourceMode, setSourceMode] = useState("upload");
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [page, setPage] = useState("main");
   const statusInterval = useRef(null);
 
   const fetchStatus = useCallback(async () => {
@@ -139,91 +141,118 @@ export default function App() {
     message.success("All ROIs cleared");
   }
 
-  const tabs = [
-    { key: "upload", label: "Upload Video", icon: <FolderOpenOutlined /> },
-    { key: "rtsp", label: "RTSP Live Stream", icon: <VideoCameraOutlined /> },
-    { key: "history", label: "History", icon: <HistoryOutlined /> },
-  ];
+  const tabs = null;
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Parking Management System</h1>
-        {connected && <span className="connected-badge">● Live</span>}
+        <div className="header-left">
+          <h1>Parking Management System</h1>
+          {connected && <span className="connected-badge">● Live</span>}
+        </div>
+        <div className="header-nav">
+          <button
+            className={`nav-btn ${page === "main" ? "active" : ""}`}
+            onClick={() => setPage("main")}
+          >
+            <VideoCameraOutlined />
+            <span>Monitor</span>
+          </button>
+          <button
+            className={`nav-btn ${page === "cameras" ? "active" : ""}`}
+            onClick={() => setPage("cameras")}
+          >
+            <SettingOutlined />
+            <span>Cameras</span>
+          </button>
+          <button
+            className={`nav-btn ${page === "history" ? "active" : ""}`}
+            onClick={() => setPage("history")}
+          >
+            <HistoryOutlined />
+            <span>History</span>
+          </button>
+        </div>
       </header>
 
-      <div className="source-tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={`tab-btn ${sourceMode === tab.key ? "active" : ""}`}
-            onClick={() => setSourceMode(tab.key)}
-          >
-            {tab.icon}
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="source-panel glass-panel">
-        {sourceMode === "upload" ? (
-          <div className="upload-area">
-            <Upload.Dragger
-              accept=".mp4,.avi,.mov,.mkv"
-              showUploadList={false}
-              beforeUpload={handleUpload}
-              disabled={uploading}
-            >
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined />
-              </p>
-              <p className="ant-upload-text">
-                {uploading ? "Uploading..." : "Click or drag video file here"}
-              </p>
-              <p className="ant-upload-hint">Supports MP4, AVI, MOV, MKV</p>
-            </Upload.Dragger>
-          </div>
-        ) : sourceMode === "rtsp" ? (
-          <RTSPInput
-            onConnect={handleRTSPConnect}
-            onDisconnect={handleRTSPDisconnect}
-            connecting={connecting}
-            connected={connected}
-          />
-        ) : (
-          <HistoryPanel />
-        )}
-      </div>
-
-      {sourceMode !== "history" && (
+      {page === "cameras" ? (
+        <CameraManager />
+      ) : page === "history" ? (
+        <HistoryPanel />
+      ) : (
         <div className="main-area">
-          <div className="video-section">
-            <VideoPlayer
-              streamUrl={streamUrl}
-              videoWidth={videoWidth}
-              videoHeight={videoHeight}
-              drawMode={drawMode}
-              currentPoints={currentPoints}
-              onPointsChange={setCurrentPoints}
-              onSlotGenerated={handleSlotGenerated}
-              slotCount={slotCount}
-            />
+          <div className="source-panel">
+            <div className="source-tabs">
+              <button
+                className={`tab-btn ${sourceMode === "upload" ? "active" : ""}`}
+                onClick={() => setSourceMode("upload")}
+              >
+                <FolderOpenOutlined />
+                <span>Upload Video</span>
+              </button>
+              <button
+                className={`tab-btn ${sourceMode === "rtsp" ? "active" : ""}`}
+                onClick={() => setSourceMode("rtsp")}
+              >
+                <VideoCameraOutlined />
+                <span>RTSP Live</span>
+              </button>
+            </div>
+            {sourceMode === "upload" ? (
+              <Upload.Dragger
+                accept=".mp4,.avi,.mov,.mkv"
+                showUploadList={false}
+                beforeUpload={handleUpload}
+                disabled={uploading}
+                className="source-upload-dragger"
+              >
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">
+                  {uploading ? "Uploading..." : "Click or drag video file here"}
+                </p>
+                <p className="ant-upload-hint">Supports MP4, AVI, MOV, MKV</p>
+              </Upload.Dragger>
+            ) : (
+              <RTSPInput
+                onConnect={handleRTSPConnect}
+                onDisconnect={handleRTSPDisconnect}
+                connecting={connecting}
+                connected={connected}
+              />
+            )}
           </div>
 
-          <div className="controls-section">
-            <ROIControls
-              drawMode={drawMode}
-              setDrawMode={(m) => {
-                setDrawMode(m);
-                setCurrentPoints([]);
-              }}
-              slotCount={slotCount}
-              setSlotCount={setSlotCount}
-              onSaveManual={handleSaveManual}
-              onClear={handleClear}
-              disabled={!streamUrl}
-            />
-            <StatusPanel status={status} />
+          <div className="content-area">
+            <div className="video-section">
+              <VideoPlayer
+                streamUrl={streamUrl}
+                videoWidth={videoWidth}
+                videoHeight={videoHeight}
+                drawMode={drawMode}
+                currentPoints={currentPoints}
+                onPointsChange={setCurrentPoints}
+                onSlotGenerated={handleSlotGenerated}
+                slotCount={slotCount}
+              />
+            </div>
+
+            <div className="controls-section">
+              <ROIControls
+                drawMode={drawMode}
+                setDrawMode={(m) => {
+                  setDrawMode(m);
+                  setCurrentPoints([]);
+                }}
+                slotCount={slotCount}
+                setSlotCount={setSlotCount}
+                onSaveManual={handleSaveManual}
+                onClear={handleClear}
+                disabled={!streamUrl}
+              />
+              <StatusPanel status={status} />
+            </div>
           </div>
         </div>
       )}

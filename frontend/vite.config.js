@@ -14,6 +14,7 @@ export default defineConfig({
       "/roi": "http://localhost:8000",
       "/status": "http://localhost:8000",
       "/history": "http://localhost:8000",
+      "/cameras": "http://localhost:8000",
     },
   },
   build: {

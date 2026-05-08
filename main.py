@@ -20,6 +20,7 @@ from video_processor import VideoProcessor
 from roi_manager import ROIManager
 from plate_ocr import PlateOCR
 from history_manager import HistoryManager
+from camera_manager import add_camera, get_cameras, get_camera, update_camera, delete_camera, toggle_enabled, is_full, MAX_CAMERAS
 
 app = FastAPI(title="Parking Management MVP")
 
@@ -45,6 +46,20 @@ class ROIRequest(BaseModel):
 
 class RTSPRequest(BaseModel):
     url: str
+
+
+class CameraCreate(BaseModel):
+    name: str
+    rtsp_url: str
+
+
+class CameraUpdate(BaseModel):
+    name: str
+    rtsp_url: str
+
+
+class CameraEnable(BaseModel):
+    enabled: bool
 
 
 def get_detector():
@@ -292,6 +307,54 @@ async def export_history():
 async def clear_history():
     history_manager.clear_history()
     return {"message": "History cleared"}
+
+
+@app.get("/cameras")
+async def list_cameras():
+    cameras = get_cameras()
+    full = is_full()
+    return {"cameras": cameras, "max_cameras": MAX_CAMERAS, "can_add": not full}
+
+
+@app.post("/cameras")
+async def create_camera(req: CameraCreate):
+    if not req.name.strip():
+        raise HTTPException(400, "Name is required")
+    if not req.rtsp_url.strip():
+        raise HTTPException(400, "RTSP URL is required")
+    try:
+        camera = add_camera(req.name.strip(), req.rtsp_url.strip())
+        return {"message": "Camera added", "camera": camera}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.put("/cameras/{cam_id}")
+async def update_camera_endpoint(cam_id: str, req: CameraUpdate):
+    if not req.name.strip():
+        raise HTTPException(400, "Name is required")
+    if not req.rtsp_url.strip():
+        raise HTTPException(400, "RTSP URL is required")
+    camera = update_camera(cam_id, req.name.strip(), req.rtsp_url.strip())
+    if not camera:
+        raise HTTPException(404, "Camera not found")
+    return {"message": "Camera updated", "camera": camera}
+
+
+@app.delete("/cameras/{cam_id}")
+async def remove_camera(cam_id: str):
+    deleted = delete_camera(cam_id)
+    if not deleted:
+        raise HTTPException(404, "Camera not found")
+    return {"message": "Camera deleted"}
+
+
+@app.patch("/cameras/{cam_id}/enable")
+async def toggle_camera(cam_id: str, req: CameraEnable):
+    camera = toggle_enabled(cam_id, req.enabled)
+    if not camera:
+        raise HTTPException(404, "Camera not found")
+    return {"message": "Camera updated", "camera": camera}
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
