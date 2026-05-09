@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Table, Button, Modal, Form, Input, Switch, Space, Popconfirm, Tag, message } from "antd";
-import { VideoCameraAddOutlined, EditOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
-import { getCameras, addCamera, updateCamera, deleteCamera, toggleCameraEnabled } from "../utils/api";
+import { Table, Button, Modal, Form, Input, Switch, Space, Popconfirm, Tag, message, Tooltip } from "antd";
+import { VideoCameraAddOutlined, EditOutlined, DeleteOutlined, LinkOutlined, DisconnectOutlined, LoadingOutlined } from "@ant-design/icons";
+import { getCameras, addCamera, updateCamera, deleteCamera, toggleCameraEnabled, connectCamera, disconnectCamera } from "../utils/api";
 
 export default function CameraManager() {
   const [cameras, setCameras] = useState([]);
@@ -9,6 +9,7 @@ export default function CameraManager() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCamera, setEditingCamera] = useState(null);
+  const [connectingIds, setConnectingIds] = useState(new Set());
   const [form] = Form.useForm();
 
   const fetchCameras = useCallback(async () => {
@@ -41,6 +42,9 @@ export default function CameraManager() {
 
   const handleDelete = async (id) => {
     try {
+      if (cameras.find((c) => c.id === id)?.stream_connected) {
+        await disconnectCamera(id);
+      }
       await deleteCamera(id);
       message.success("Camera deleted");
       fetchCameras();
@@ -56,6 +60,32 @@ export default function CameraManager() {
       fetchCameras();
     } catch (e) {
       message.error("Failed to toggle: " + e.message);
+    }
+  };
+
+  const handleConnect = async (id) => {
+    setConnectingIds((prev) => new Set([...prev, id]));
+    try {
+      await connectCamera(id);
+      message.success("Camera connected");
+      fetchCameras();
+    } catch (e) {
+      message.error("Failed to connect: " + e.message);
+    }
+    setConnectingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const handleDisconnect = async (id) => {
+    try {
+      await disconnectCamera(id);
+      message.success("Camera disconnected");
+      fetchCameras();
+    } catch (e) {
+      message.error("Failed to disconnect: " + e.message);
     }
   };
 
@@ -88,7 +118,7 @@ export default function CameraManager() {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      width: 180,
+      width: 160,
     },
     {
       title: "RTSP URL",
@@ -102,10 +132,60 @@ export default function CameraManager() {
       ),
     },
     {
+      title: "Stream",
+      key: "stream",
+      width: 90,
+      align: "center",
+      render: (_, record) => {
+        if (connectingIds.has(record.id)) {
+          return <LoadingOutlined />;
+        }
+        if (record.stream_connected) {
+          return <Tag color="green">Live</Tag>;
+        }
+        return <Tag color="default">Offline</Tag>;
+      },
+    },
+    {
+      title: "Connect",
+      key: "connect",
+      width: 100,
+      align: "center",
+      render: (_, record) => {
+        if (connectingIds.has(record.id)) {
+          return <LoadingOutlined />;
+        }
+        if (record.stream_connected) {
+          return (
+            <Tooltip title="Disconnect">
+              <Button
+                type="text"
+                danger
+                icon={<DisconnectOutlined />}
+                onClick={() => handleDisconnect(record.id)}
+                size="small"
+              />
+            </Tooltip>
+          );
+        }
+        return (
+          <Tooltip title={record.enabled ? "Connect" : "Camera is disabled"}>
+            <Button
+              type="text"
+              icon={<LinkOutlined />}
+              onClick={() => handleConnect(record.id)}
+              disabled={!record.enabled}
+              size="small"
+            />
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: "Enabled",
       dataIndex: "enabled",
       key: "enabled",
-      width: 100,
+      width: 90,
       align: "center",
       render: (enabled, record) => (
         <Switch
@@ -117,7 +197,7 @@ export default function CameraManager() {
     {
       title: "Status",
       key: "status",
-      width: 100,
+      width: 90,
       align: "center",
       render: (_, record) => (
         <Tag color={record.enabled ? "green" : "default"}>
@@ -128,7 +208,7 @@ export default function CameraManager() {
     {
       title: "Actions",
       key: "actions",
-      width: 120,
+      width: 100,
       align: "center",
       render: (_, record) => (
         <Space size="small">

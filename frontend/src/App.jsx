@@ -7,7 +7,7 @@ import StatusPanel from "./components/StatusPanel";
 import RTSPInput from "./components/RTSPInput";
 import HistoryPanel from "./components/HistoryPanel";
 import CameraManager from "./components/CameraManager";
-import { uploadVideo, getResolution, saveROI, clearROIs, getStatus, connectRTSP, disconnectStream } from "./utils/api";
+import { uploadVideo, getResolution, saveROI, clearROIs, getROIs, getCameraStatus } from "./utils/api";
 
 const MODE = { IDLE: 0, MANUAL: 1, AUTO: 2 };
 
@@ -21,19 +21,21 @@ export default function App() {
   const [status, setStatus] = useState({ slots: [], total: 0, free: 0, occupied: 0, detected: 0, connected: false, source: null });
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState("");
-  const [sourceMode, setSourceMode] = useState("upload");
+  const [sourceMode, setSourceMode] = useState("rtsp");
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [activeCameraId, setActiveCameraId] = useState(null);
   const [page, setPage] = useState("main");
   const statusInterval = useRef(null);
 
   const fetchStatus = useCallback(async () => {
+    if (!activeCameraId) return;
     try {
-      const data = await getStatus();
+      const data = await getCameraStatus(activeCameraId);
       setStatus(data);
       setConnected(data.connected || false);
     } catch (e) {}
-  }, []);
+  }, [activeCameraId]);
 
   useEffect(() => {
     if (!streamUrl) return;
@@ -62,31 +64,29 @@ export default function App() {
     return false;
   }
 
-  async function handleRTSPConnect(url) {
+  async function handleRTSPConnect(camera) {
     setConnecting(true);
     try {
-      await connectRTSP(url);
-      message.success("Connected to RTSP stream");
       setConnected(true);
-      setStreamUrl("/video_feed?" + Date.now());
+      setStreamUrl(`/cameras/${camera.id}/video_feed?` + Date.now());
       try {
-        const res = await getResolution();
-        setVideoWidth(res.width);
-        setVideoHeight(res.height);
-      } catch (e) {
-        // Resolution may not be available immediately
-      }
-    } catch (e) {
-      message.error("Connection failed: " + e.message);
-    }
+        const res = await fetch(`/cameras/${camera.id}/resolution`);
+        const data = await res.json();
+        setVideoWidth(data.width);
+        setVideoHeight(data.height);
+      } catch (e) {}
+    } catch (e) {}
     setConnecting(false);
   }
 
-  async function handleRTSPDisconnect() {
-    await disconnectStream();
+  async function handleRTSPDisconnect(camId) {
     setConnected(false);
     setStreamUrl(null);
-    message.success("Disconnected");
+    setActiveCameraId(null);
+  }
+
+  function handleCameraChange(camId) {
+    setActiveCameraId(camId);
   }
 
   function scaleToVideo(points) {
@@ -100,13 +100,17 @@ export default function App() {
   }
 
   async function handleSaveManual() {
+    if (!activeCameraId) {
+      message.warning("Connect a camera first");
+      return;
+    }
     if (currentPoints.length < 3) {
       message.warning("Need at least 3 points");
       return;
     }
     try {
       const scaled = scaleToVideo(currentPoints);
-      const data = await saveROI(scaled);
+      const data = await saveROI(activeCameraId, scaled);
       message.success(`Slot ${data.slot.id} saved`);
       setCurrentPoints([]);
       setDrawMode(MODE.IDLE);
@@ -116,15 +120,22 @@ export default function App() {
   }
 
   async function handleSlotGenerated(slots, rawPoints) {
+    if (!activeCameraId) {
+      message.warning("Connect a camera first");
+      return;
+    }
     try {
       if (!videoWidth || !videoHeight) {
-        const res = await getResolution();
-        setVideoWidth(res.width);
-        setVideoHeight(res.height);
+        const res = await fetch(`/cameras/${activeCameraId}/resolution`);
+        if (res.ok) {
+          const data = await res.json();
+          setVideoWidth(data.width);
+          setVideoHeight(data.height);
+        }
       }
       const scaledSlots = slots.map((slot) => scaleToVideo(slot));
       for (let i = 0; i < scaledSlots.length; i++) {
-        await saveROI(scaledSlots[i], `P${i + 1}`);
+        await saveROI(activeCameraId, scaledSlots[i], `P${i + 1}`);
       }
       message.success(`${slots.length} slots saved`);
       setCurrentPoints([]);
@@ -135,7 +146,8 @@ export default function App() {
   }
 
   async function handleClear() {
-    await clearROIs();
+    if (!activeCameraId) return;
+    await clearROIs(activeCameraId);
     setCurrentPoints([]);
     setDrawMode(MODE.IDLE);
     message.success("All ROIs cleared");
@@ -218,6 +230,8 @@ export default function App() {
               <RTSPInput
                 onConnect={handleRTSPConnect}
                 onDisconnect={handleRTSPDisconnect}
+                onCameraChange={handleCameraChange}
+                activeCameraId={activeCameraId}
                 connecting={connecting}
                 connected={connected}
               />

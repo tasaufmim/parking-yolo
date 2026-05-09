@@ -10,8 +10,14 @@ OCCUPY_DELAY_SECONDS = 30
 FREE_DELAY_SECONDS = 15
 
 
+def _get_roi_file(camera_id: str | None) -> str:
+    if camera_id:
+        return f"rois_{camera_id}.json"
+    return DATA_FILE
+
+
 class ROIManager:
-    def __init__(self):
+    def __init__(self, camera_id: str | None = None):
         self.slots: list[dict] = []
         self.slot_tracking: dict[str, dict] = {}
         self.captured_vehicles: dict[str, dict] = {}
@@ -24,6 +30,8 @@ class ROIManager:
         self.history_manager = None
         self.on_ocr_complete = None
         self.last_capture_path = None
+        self.camera_id = camera_id
+        self.data_file = _get_roi_file(camera_id)
         self._init_license_plate_detector()
         self.load()
 
@@ -58,14 +66,20 @@ class ROIManager:
     def _get_vehicle_snapshot_path(self) -> str:
         now = datetime.now()
         date_str = now.strftime("%Y%m%d")
-        path = os.path.join("logs", date_str, "snapshots", "vehicles")
+        base = os.path.join("logs", date_str, "snapshots", "vehicles")
+        if self.camera_id:
+            base = os.path.join("logs", self.camera_id, date_str, "snapshots", "vehicles")
+        path = base
         os.makedirs(path, exist_ok=True)
         return path
 
     def _get_plate_snapshot_path(self) -> str:
         now = datetime.now()
         date_str = now.strftime("%Y%m%d")
-        path = os.path.join("logs", date_str, "snapshots", "license_plates")
+        base = os.path.join("logs", date_str, "snapshots", "license_plates")
+        if self.camera_id:
+            base = os.path.join("logs", self.camera_id, date_str, "snapshots", "license_plates")
+        path = base
         os.makedirs(path, exist_ok=True)
         return path
 
@@ -442,12 +456,12 @@ class ROIManager:
         return frame
 
     def save(self):
-        with open(DATA_FILE, "w") as f:
+        with open(self.data_file, "w") as f:
             json.dump(self.slots, f, indent=2)
 
     def load(self):
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, "r") as f:
+        if os.path.exists(self.data_file):
+            with open(self.data_file, "r") as f:
                 self.slots = json.load(f)
         for slot in self.slots:
             slot_id = slot["id"]

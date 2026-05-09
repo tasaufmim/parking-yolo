@@ -33,27 +33,6 @@ export async function getSnapshot() {
   return res.blob();
 }
 
-export async function saveROI(points, slotId) {
-  const body = { points };
-  if (slotId) body.slot_id = slotId;
-  const res = await fetch("/roi", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return res.json();
-}
-
-export async function clearROIs() {
-  const res = await fetch("/roi", { method: "DELETE" });
-  return res.json();
-}
-
-export async function getROIs() {
-  const res = await fetch("/roi");
-  return res.json();
-}
-
 export async function getStatus() {
   const res = await fetch("/status");
   return res.json();
@@ -146,5 +125,75 @@ export async function toggleCameraEnabled(id, enabled) {
     const data = await res.json();
     throw new Error(data.detail || "Failed to toggle camera");
   }
+  return res.json();
+}
+
+export async function connectCamera(id) {
+  const res = await fetch(`/cameras/${id}/connect`, { method: "POST" });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Failed to connect camera");
+  }
+  return res.json();
+}
+
+export async function disconnectCamera(id) {
+  const res = await fetch(`/cameras/${id}/disconnect`, { method: "POST" });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.detail || "Failed to disconnect camera");
+  }
+  return res.json();
+}
+
+export async function getCameraStatus(id) {
+  const res = await fetch(`/cameras/${id}/status`);
+  return res.json();
+}
+
+export async function getAllCameraStatus() {
+  const res = await fetch(`/cameras/all_status`);
+  return res.json();
+}
+
+export async function saveCameraROI(camId, points, slotId) {
+  const body = { points };
+  if (slotId) body.slot_id = slotId;
+  const res = await fetch(`/cameras/${camId}/roi`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+export async function clearCameraROIs(camId) {
+  const res = await fetch(`/cameras/${camId}/roi`, { method: "DELETE" });
+  return res.json();
+}
+
+export async function getCameraROIs(camId) {
+  const res = await fetch(`/cameras/${camId}/roi`);
+  return res.json();
+}
+
+export async function saveROI(camId, points, slotId) {
+  const body = { points };
+  if (slotId) body.slot_id = slotId;
+  const res = await fetch(`/cameras/${camId}/roi`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+export async function clearROIs(camId) {
+  const res = await fetch(`/cameras/${camId}/roi`, { method: "DELETE" });
+  return res.json();
+}
+
+export async function getROIs(camId) {
+  const res = await fetch(`/cameras/${camId}/roi`);
   return res.json();
 }
