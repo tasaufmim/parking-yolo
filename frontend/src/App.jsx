@@ -15,7 +15,8 @@ const MODE = { IDLE: 0, MANUAL: 1, AUTO: 2 };
 export default function App() {
   const [streamUrl, setStreamUrl] = useState(null);
   const [drawMode, setDrawMode] = useState(MODE.IDLE);
-  const [slotCount, setSlotCount] = useState(4);
+  const [slotNames, setSlotNames] = useState([]);
+  const [currentSlotIndex, setCurrentSlotIndex] = useState(0);
   const [currentPoints, setCurrentPoints] = useState([]);
   const [videoWidth, setVideoWidth] = useState(0);
   const [videoHeight, setVideoHeight] = useState(0);
@@ -100,21 +101,21 @@ export default function App() {
     ]);
   }
 
-  async function handleSaveManual() {
+  async function handleSaveManual(slotToSave) {
     if (!activeCameraId) {
       message.warning("Connect a camera first");
       return;
     }
-    if (currentPoints.length < 3) {
-      message.warning("Need at least 3 points");
-      return;
-    }
     try {
-      const scaled = scaleToVideo(currentPoints);
-      const data = await saveROI(activeCameraId, scaled);
-      message.success(`Slot ${data.slot.id} saved`);
+      const scaled = scaleToVideo(slotToSave);
+      const name = slotNames[currentSlotIndex] || `P${currentSlotIndex + 1}`;
+      await saveROI(activeCameraId, scaled, name);
+      message.success(`Slot "${name}" saved`);
       setCurrentPoints([]);
-      setDrawMode(MODE.IDLE);
+      if (currentSlotIndex + 1 >= slotNames.length) {
+        setDrawMode(MODE.IDLE);
+      }
+      setCurrentSlotIndex((prev) => Math.min(prev + 1, slotNames.length - 1));
     } catch (e) {
       message.error("Save failed");
     }
@@ -136,11 +137,14 @@ export default function App() {
       }
       const scaledSlots = slots.map((slot) => scaleToVideo(slot));
       for (let i = 0; i < scaledSlots.length; i++) {
-        await saveROI(activeCameraId, scaledSlots[i], `P${i + 1}`);
+        const name = slotNames[i] || `P${i + 1}`;
+        await saveROI(activeCameraId, scaledSlots[i], name);
       }
-      message.success(`${slots.length} slots saved`);
+      message.success(`${slots.length} slots saved with custom names`);
       setCurrentPoints([]);
       setDrawMode(MODE.IDLE);
+      setCurrentSlotIndex(0);
+      setSlotNames([]);
     } catch (e) {
       message.error("Save failed");
     }
@@ -151,6 +155,8 @@ export default function App() {
     await clearROIs(activeCameraId);
     setCurrentPoints([]);
     setDrawMode(MODE.IDLE);
+    setCurrentSlotIndex(0);
+    setSlotNames([]);
     message.success("All ROIs cleared");
   }
 
@@ -258,7 +264,9 @@ export default function App() {
                 currentPoints={currentPoints}
                 onPointsChange={setCurrentPoints}
                 onSlotGenerated={handleSlotGenerated}
-                slotCount={slotCount}
+                slotNames={slotNames}
+                currentSlotIndex={currentSlotIndex}
+                onSaveSlot={handleSaveManual}
               />
             </div>
 
@@ -268,9 +276,12 @@ export default function App() {
                 setDrawMode={(m) => {
                   setDrawMode(m);
                   setCurrentPoints([]);
+                  setCurrentSlotIndex(0);
                 }}
-                slotCount={slotCount}
-                setSlotCount={setSlotCount}
+                slotNames={slotNames}
+                setSlotNames={setSlotNames}
+                currentSlotIndex={currentSlotIndex}
+                setCurrentSlotIndex={setCurrentSlotIndex}
                 onSaveManual={handleSaveManual}
                 onClear={handleClear}
                 disabled={!streamUrl}

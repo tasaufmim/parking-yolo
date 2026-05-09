@@ -10,11 +10,15 @@ export default function VideoPlayer({
   onPointsChange,
   currentPoints,
   onSlotGenerated,
-  slotCount,
+  slotNames,
+  currentSlotIndex,
+  onSaveSlot,
 }) {
   const imgRef = useRef(null);
   const canvasRef = useRef(null);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const drawnSlots = useRef([]);
+  const [drawVersion, setDrawVersion] = useState(0);
 
   useEffect(() => {
     if (!imgLoaded || !imgRef.current) return;
@@ -23,7 +27,13 @@ export default function VideoPlayer({
     canvas.width = rect.width;
     canvas.height = rect.height;
     redraw();
-  }, [imgLoaded, currentPoints, drawMode]);
+  }, [imgLoaded, currentPoints, drawMode, drawVersion]);
+
+  useEffect(() => {
+    drawnSlots.current = [];
+    setDrawVersion(0);
+    onPointsChange([]);
+  }, [slotNames]);
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -32,15 +42,23 @@ export default function VideoPlayer({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (drawMode === MODE.AUTO && currentPoints.length >= 2) {
-      drawAutoPoints(ctx, canvas);
+      drawAutoPoints(ctx);
     } else if (drawMode === MODE.MANUAL && currentPoints.length >= 1) {
       drawManualPoints(ctx);
     }
-  }, [currentPoints, drawMode]);
+
+    for (let i = 0; i < drawnSlots.current.length; i++) {
+      const pts = drawnSlots.current[i];
+      if (pts.length >= 3) {
+        const name = slotNames[i] || `P${i + 1}`;
+        drawSlotPolygon(ctx, pts, name, i);
+      }
+    }
+  }, [currentPoints, drawMode, slotNames, drawVersion]);
 
   function drawManualPoints(ctx) {
-    ctx.strokeStyle = "#00ff00";
-    ctx.fillStyle = "#00ff00";
+    ctx.strokeStyle = "#ffff00";
+    ctx.fillStyle = "#ffff00";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(currentPoints[0][0], currentPoints[0][1]);
@@ -80,28 +98,29 @@ export default function VideoPlayer({
     }
   }
 
-  function drawGeneratedSlots(ctx, slots) {
+  function drawSlotPolygon(ctx, points, name, index) {
     const colors = ["#00ff00", "#00cc00", "#009900", "#006600"];
-    for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
-      ctx.strokeStyle = colors[i % colors.length];
-      ctx.fillStyle = colors[i % colors.length] + "33";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(slot[0][0], slot[0][1]);
-      for (let j = 1; j < slot.length; j++) {
-        ctx.lineTo(slot[j][0], slot[j][1]);
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      const cx = (slot[0][0] + slot[2][0]) / 2;
-      const cy = (slot[0][1] + slot[2][1]) / 2;
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 14px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(`P${i + 1}`, cx, cy + 5);
+    const color = colors[index % colors.length];
+
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color + "22";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i][0], points[i][1]);
     }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const cx = points.reduce((s, p) => s + p[0], 0) / points.length;
+    const cy = points.reduce((s, p) => s + p[1], 0) / points.length;
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(name, cx, cy + 5);
+    ctx.textAlign = "left";
   }
 
   function lerp(a, b, t) {
@@ -135,28 +154,21 @@ export default function VideoPlayer({
       const y = Math.round(e.clientY - rect.top);
       const newPoints = [...currentPoints, [x, y]];
 
-      if (drawMode === MODE.AUTO && newPoints.length === 4) {
-        const slots = generateSlots(newPoints, slotCount || 4);
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawGeneratedSlots(ctx, slots);
+      if (drawMode === MODE.MANUAL && newPoints.length === 4) {
+        drawnSlots.current = [...drawnSlots.current, newPoints];
+        onSaveSlot(newPoints);
+        onPointsChange([]);
+        setDrawVersion((v) => v + 1);
+      } else if (drawMode === MODE.AUTO && newPoints.length === 4) {
+        const slots = generateSlots(newPoints, slotNames.length || 4);
+        drawnSlots.current = slots;
         onSlotGenerated(slots, newPoints);
       } else {
         onPointsChange(newPoints);
       }
     },
-    [drawMode, currentPoints, slotCount, onPointsChange, onSlotGenerated]
+    [drawMode, currentPoints, slotNames, onPointsChange, onSlotGenerated, onSaveSlot]
   );
-
-  function scaleToVideo(points) {
-    if (!imgRef.current || !videoWidth || !videoHeight) return points;
-    const rect = imgRef.current.getBoundingClientRect();
-    return points.map(([x, y]) => [
-      Math.round((x * videoWidth) / rect.width),
-      Math.round((y * videoHeight) / rect.height),
-    ]);
-  }
 
   return (
     <div className="video-player">

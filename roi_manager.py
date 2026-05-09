@@ -30,6 +30,7 @@ class ROIManager:
         self.history_manager = None
         self.on_ocr_complete = None
         self.last_capture_path = None
+        self.last_vehicle_capture_path = None
         self.camera_id = camera_id
         self.data_file = _get_roi_file(camera_id)
         self._init_license_plate_detector()
@@ -119,6 +120,7 @@ class ROIManager:
                     "detection_bbox": detection_bbox,
                 }
                 self.last_capture_path = filepath
+                self.last_vehicle_capture_path = filepath
                 self.last_snapshot_error = None
                 return True, ""
             else:
@@ -268,6 +270,8 @@ class ROIManager:
         self.captured_vehicles = {}
         self.captured_plates = {}
         self.last_statuses = []
+        self.last_capture_path = None
+        self.last_vehicle_capture_path = None
 
     def clear_all(self):
         self.slots = []
@@ -411,7 +415,7 @@ class ROIManager:
             cv2.putText(frame, label, (cx - 20, cy - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
         return frame
 
-    def draw_plate_overlay(self, frame: np.ndarray, slot_statuses: list[dict] | None = None) -> np.ndarray:
+    def draw_plate_overlay(self, frame: np.ndarray, slot_statuses: list[dict] | None = None, camera_id: str = "") -> np.ndarray:
         """Draw license plate text and bbox on frame."""
         if not slot_statuses:
             return frame
@@ -445,7 +449,7 @@ class ROIManager:
             
             plate_text = ""
             if self.plate_ocr_instance:
-                plate_result = self.plate_ocr_instance.get_result(slot_id, car_id)
+                plate_result = self.plate_ocr_instance.get_result(camera_id, slot_id, car_id)
                 plate_text = plate_result.get("plate_text", "")
             
             if plate_text and plate_text not in ["N/A", "Error", "Timeout", "processing"]:

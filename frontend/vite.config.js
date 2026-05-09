@@ -15,6 +15,8 @@ export default defineConfig({
       "/status": "http://localhost:8000",
       "/history": "http://localhost:8000",
       "/cameras": "http://localhost:8000",
+      "/logs": "http://localhost:8000",
+      "/snapshots": "http://localhost:8000",
     },
   },
   build: {

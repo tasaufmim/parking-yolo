@@ -76,12 +76,12 @@ Respond ONLY in this exact JSON format (no other text):
         _, buffer = cv2.imencode(".jpg", image)
         return base64.b64encode(buffer).decode("utf-8")
     
-    async def analyze_async(self, plate_image, slot_id: str, car_id: str, image_filename: str = None):
+    async def analyze_async(self, plate_image, slot_id: str, car_id: str, image_filename: str = None, camera_id: str = ""):
         if not self.api_key:
             print("OPENAI_API_KEY not set")
-            return self._use_fallback(plate_image, slot_id, car_id, image_filename, "API key not set")
+            return self._use_fallback(plate_image, slot_id, car_id, image_filename, "API key not set", camera_id)
         
-        key = f"{slot_id}_{car_id}"
+        key = f"{camera_id}_{slot_id}_{car_id}"
         if key in self.pending:
             return None
         
@@ -102,7 +102,7 @@ Respond ONLY in this exact JSON format (no other text):
         # Try OpenAI with 3 retries
         for attempt in range(3):
             try:
-                result = await self._call_openai(plate_image, slot_id, car_id, image_filename)
+                result = await self._call_openai(plate_image, slot_id, car_id, image_filename, camera_id)
                 if result and result.get("plate_text") not in ["Error", "N/A", "Timeout"]:
                     result["source"] = "openai"
                     self.results[key] = result
@@ -113,17 +113,17 @@ Respond ONLY in this exact JSON format (no other text):
                 if attempt == 2:
                     error_msg = str(e)[:100]
                     print(f"[FALLBACK] {slot_id}/{car_id}: OpenAI failed - {error_msg}")
-                    fallback_result = self._use_fallback(plate_image, slot_id, car_id, image_filename, error_msg)
+                    fallback_result = self._use_fallback(plate_image, slot_id, car_id, image_filename, error_msg, camera_id)
                     self.pending.discard(key)
                     return fallback_result
                 await asyncio.sleep(0.5)
         
         # If all retries fail, fallback to PaddleOCR
-        fallback_result = self._use_fallback(plate_image, slot_id, car_id, image_filename, "All retries failed")
+        fallback_result = self._use_fallback(plate_image, slot_id, car_id, image_filename, "All retries failed", camera_id)
         self.pending.discard(key)
         return fallback_result
 
-    async def _call_openai(self, plate_image, slot_id, car_id, image_filename):
+    async def _call_openai(self, plate_image, slot_id, car_id, image_filename, camera_id=""):
         image_b64 = self._encode_image(plate_image)
         
         url = "https://api.openai.com/v1/chat/completions"
@@ -182,13 +182,13 @@ Respond ONLY in this exact JSON format (no other text):
                 else:
                     raise Exception(f"HTTP {resp.status}")
     
-    def _use_fallback(self, plate_image, slot_id, car_id, image_filename, error):
+    def _use_fallback(self, plate_image, slot_id, car_id, image_filename, error, camera_id=""):
         try:
             fallback_result = self.paddle_fallback.analyze(plate_image, slot_id, car_id, image_filename)
             if fallback_result:
                 fallback_result["source"] = "paddleocr"
                 fallback_result["fallback_reason"] = error
-                self.results[f"{slot_id}_{car_id}"] = fallback_result
+                self.results[f"{camera_id}_{slot_id}_{car_id}"] = fallback_result
                 self._save_to_log(fallback_result)
                 return fallback_result
         except Exception as e:
@@ -205,20 +205,20 @@ Respond ONLY in this exact JSON format (no other text):
             "source": "error",
             "error": error
         }
-        self.results[f"{slot_id}_{car_id}"] = error_result
+        self.results[f"{camera_id}_{slot_id}_{car_id}"] = error_result
         self._save_to_log(error_result)
         return error_result
     
-    def get_result(self, slot_id: str, car_id: str) -> dict:
-        key = f"{slot_id}_{car_id}"
+    def get_result(self, camera_id: str, slot_id: str, car_id: str) -> dict:
+        key = f"{camera_id}_{slot_id}_{car_id}"
         return self.results.get(key, {
             "plate_text": "N/A",
             "plate_color": "N/A", 
             "text_color": "N/A"
         })
     
-    def is_processing(self, slot_id: str, car_id: str) -> bool:
-        key = f"{slot_id}_{car_id}"
+    def is_processing(self, camera_id: str, slot_id: str, car_id: str) -> bool:
+        key = f"{camera_id}_{slot_id}_{car_id}"
         return key in self.pending
     
     def clear(self):

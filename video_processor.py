@@ -8,11 +8,12 @@ from roi_manager import ROIManager
 
 
 class VideoProcessor:
-    def __init__(self, source: str, detector: CarDetector, roi_manager: ROIManager):
+    def __init__(self, source: str, detector: CarDetector, roi_manager: ROIManager, camera_id: str = ""):
         self.source = source
         self.is_rtsp = source.startswith(("rtsp://", "rtmp://"))
         self.detector = detector
         self.roi_manager = roi_manager
+        self.camera_id = camera_id
         self.cap = None
         self.running = False
         self.connected = False
@@ -29,7 +30,7 @@ class VideoProcessor:
         if self.roi_manager:
             self.roi_manager.set_plate_ocr_instance(plate_ocr)
             self.roi_manager.set_plate_ocr_callback(
-                lambda img, sid, cid, f: self._queue_ocr(img, sid, cid, f)
+                lambda img, sid, cid, f: self._queue_ocr(img, sid, cid, f, self.camera_id)
             )
             self.roi_manager.set_on_ocr_complete(
                 lambda sid, cid, result: self._on_ocr_complete(sid, cid, result)
@@ -37,22 +38,22 @@ class VideoProcessor:
 
     def _on_ocr_complete(self, slot_id, car_id, ocr_result):
         if self.roi_manager and self.roi_manager.history_manager:
-            frame_path = self.roi_manager.last_capture_path
+            frame_path = self.roi_manager.last_vehicle_capture_path
             self.roi_manager.history_manager.start_parking(slot_id, car_id, frame_path, ocr_result)
 
-    def _queue_ocr(self, plate_image, slot_id, car_id, image_filename):
+    def _queue_ocr(self, plate_image, slot_id, car_id, image_filename, camera_id=""):
         if self.plate_ocr and plate_image is not None:
             thread = threading.Thread(
                 target=self._run_async_ocr,
-                args=(plate_image, slot_id, car_id, image_filename)
+                args=(plate_image, slot_id, car_id, image_filename, self.camera_id)
             )
             thread.daemon = True
             thread.start()
 
-    def _run_async_ocr(self, plate_image, slot_id, car_id, image_filename):
+    def _run_async_ocr(self, plate_image, slot_id, car_id, image_filename, camera_id):
         try:
             result = asyncio.run(
-                self.plate_ocr.analyze_async(plate_image, slot_id, car_id, image_filename)
+                self.plate_ocr.analyze_async(plate_image, slot_id, car_id, image_filename, camera_id)
             )
             if self.roi_manager and hasattr(self.roi_manager, 'on_ocr_complete') and self.roi_manager.on_ocr_complete:
                 self.roi_manager.on_ocr_complete(slot_id, car_id, result)
@@ -164,7 +165,7 @@ class VideoProcessor:
         self.slot_statuses = self.roi_manager.check_and_capture(frame, self.detections, raw_statuses)
         frame = self.detector.draw_detections(frame, self.detections)
         frame = self.roi_manager.draw_rois(frame, self.slot_statuses)
-        frame = self.roi_manager.draw_plate_overlay(frame, self.slot_statuses)
+        frame = self.roi_manager.draw_plate_overlay(frame, self.slot_statuses, self.camera_id)
         return frame, self.slot_statuses
 
     def get_snapshot(self) -> np.ndarray | None:

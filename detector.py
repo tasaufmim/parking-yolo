@@ -94,10 +94,11 @@ class LicensePlateDetector:
 
 
 class CarDetector:
-    def __init__(self, confidence: float = 0.9, use_enhancement: bool = True):
+    def __init__(self, confidence: float = 0.9, use_enhancement: bool = True, camera_id: str = ""):
         self.model = YOLO("yolov8m.pt")
         self.confidence = confidence
         self.use_enhancement = use_enhancement
+        self.camera_id = camera_id
         self.vehicle_classes = [2, 5, 7]
         self.class_names = {2: "Car", 5: "Bus", 7: "Truck"}
         self.car_counters = {2: 0, 5: 0, 7: 0}
@@ -109,7 +110,7 @@ class CarDetector:
             self.device = "mps"
         else:
             self.device = "cpu"
-        print(f"YOLOv8 running on: {self.device}")
+        print(f"YOLOv8 running on: {self.device} (camera_id={camera_id})")
 
     def detect(self, frame: np.ndarray) -> list[dict]:
         """Run tracking on a frame. Returns list of {bbox, confidence, class, car_id, track_id}."""
@@ -157,10 +158,10 @@ class CarDetector:
                         self.track_data[track_id]["last_seen"] = current_time
 
                     track_info = self.track_data[track_id]
-                    car_id = f"{track_info['car_label_upper']}{track_info['first_seen_date']}{track_info['counter']:03d}"
+                    car_id = f"{self.camera_id}-{track_info['car_label_upper']}{track_info['first_seen_date']}{track_info['counter']:03d}"
                 else:
                     self.car_counters[cls] += 1
-                    car_id = f"{car_label_upper}{current_date}{self.car_counters[cls]:03d}"
+                    car_id = f"{self.camera_id}-{car_label_upper}{current_date}{self.car_counters[cls]:03d}"
 
                 detections.append({
                     "bbox": [x1, y1, x2, y2],

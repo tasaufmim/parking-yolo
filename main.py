@@ -32,18 +32,17 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 history_manager = HistoryManager()
-detector: CarDetector | None = None
+camera_detectors: dict[str, CarDetector] = {}
 plate_ocr = PlateOCR()
 
 camera_processors: dict[str, dict] = {}
 _stream_locks: dict[str, threading.Lock] = {}
 
 
-def get_detector():
-    global detector
-    if detector is None:
-        detector = CarDetector(confidence=0.8)
-    return detector
+def get_detector(cam_id: str) -> CarDetector:
+    if cam_id not in camera_detectors:
+        camera_detectors[cam_id] = CarDetector(confidence=0.8, camera_id=cam_id)
+    return camera_detectors[cam_id]
 
 
 class ROIRequest(BaseModel):
@@ -158,7 +157,8 @@ async def retry_ocr(sl: int):
             image,
             entry["slot_id"],
             entry["car_id"],
-            entry.get("car_photo_path")
+            entry.get("car_photo_path"),
+            camera_id=""
         )
 
         updated = history_manager.update_ocr_result(sl, result)
@@ -284,8 +284,8 @@ def _enrich_status(cam_id: str, statuses: list[dict]) -> list[dict]:
     for s in statuses:
         slot_data = dict(s)
         if s.get("car_id"):
-            plate_result = plate_ocr.get_result(f"{cam_id}_{s['id']}", s["car_id"])
-            is_processing = plate_ocr.is_processing(f"{cam_id}_{s['id']}", s["car_id"])
+            plate_result = plate_ocr.get_result(cam_id, s["id"], s["car_id"])
+            is_processing = plate_ocr.is_processing(cam_id, s["id"], s["car_id"])
             if is_processing:
                 slot_data["plate_status"] = "processing"
             elif plate_result.get("plate_text") == "N/A" or plate_result.get("plate_text") in ["Error", "Timeout"]:
@@ -316,10 +316,10 @@ async def connect_camera(cam_id: str):
         if cp.get("connected"):
             return {"message": f"Already connected to {cam['name']}", "camera": {**cam, "stream_connected": True}}
 
-    d = get_detector()
+    d = get_detector(cam_id)
     roi_mgr = ROIManager(camera_id=cam_id)
     roi_mgr.set_history_manager(history_manager)
-    processor = VideoProcessor(cam["rtsp_url"], d, roi_mgr)
+    processor = VideoProcessor(cam["rtsp_url"], d, roi_mgr, camera_id=cam_id)
     processor.set_plate_ocr(plate_ocr)
     try:
         processor.start()
