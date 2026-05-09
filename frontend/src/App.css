@@ -699,3 +699,222 @@ body {
 .camera-manager .ant-modal-header {
   border-radius: 12px 12px 0 0;
 }
+
+/* Monitor Grid */
+.monitor-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: calc(100vh - 120px);
+}
+
+.monitor-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.monitor-grid-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.monitor-grid-title > span:first-child {
+  color: #1a56db;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.monitor-grid-stats {
+  color: #8899aa;
+  font-size: 12px;
+}
+
+.grid-layout-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.grid-layout-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.3);
+  color: #555;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.grid-layout-btn:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: #1a56db;
+}
+
+.grid-layout-btn.active {
+  background: rgba(26, 86, 219, 0.1);
+  border-color: rgba(26, 86, 219, 0.3);
+  color: #1a56db;
+  font-weight: 600;
+}
+
+.camera-grid {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.camera-cell {
+  background: #111;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.camera-cell-header {
+  background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.camera-cell-name {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.camera-cell-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.camera-cell-meta .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.camera-cell-meta .status-dot.connected {
+  background: #389e0d;
+  box-shadow: 0 0 4px rgba(56, 158, 13, 0.6);
+}
+
+.camera-cell-meta .status-dot.reconnecting {
+  background: #faad14;
+  animation: pulse 1.5s infinite;
+}
+
+.camera-cell-slots {
+  color: rgba(255,255,255,0.85);
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(0,0,0,0.4);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.camera-cell-stream {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-cell-stream img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.camera-cell-placeholder {
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.placeholder-icon {
+  width: 40px;
+  height: 40px;
+  border: 2px dashed rgba(255,255,255,0.15);
+  border-radius: 50%;
+}
+
+.placeholder-text {
+  color: #555;
+  font-size: 12px;
+}
+
+.camera-cell-stream img.img-reconnecting {
+  opacity: 0.2;
+}
+
+.reconnecting-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 5;
+}
+
+.reconnecting-icon {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.reconnecting-text {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.reconnecting-hint {
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

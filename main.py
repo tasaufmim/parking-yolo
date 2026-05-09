@@ -3,6 +3,7 @@ import uuid
 import asyncio
 import cv2
 import numpy as np
+import threading
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -35,6 +36,7 @@ detector: CarDetector | None = None
 plate_ocr = PlateOCR()
 
 camera_processors: dict[str, dict] = {}
+_stream_locks: dict[str, threading.Lock] = {}
 
 
 def get_detector():
@@ -273,6 +275,8 @@ def _stop_camera(cam_id: str):
     if cp:
         cp["processor"].stop()
         del camera_processors[cam_id]
+    if cam_id in _stream_locks:
+        del _stream_locks[cam_id]
 
 
 def _enrich_status(cam_id: str, statuses: list[dict]) -> list[dict]:
@@ -347,11 +351,17 @@ async def disconnect_camera(cam_id: str):
 async def camera_video_feed(cam_id: str):
     if cam_id not in camera_processors:
         raise HTTPException(400, "Camera not connected")
-    cp = camera_processors[cam_id]
-    return StreamingResponse(
-        cp["processor"].generate_mjpeg(),
-        media_type="multipart/x-mixed-replace; boundary=frame",
-    )
+
+    if cam_id not in _stream_locks:
+        _stream_locks[cam_id] = threading.Lock()
+
+    lock = _stream_locks[cam_id]
+    with lock:
+        cp = camera_processors[cam_id]
+        return StreamingResponse(
+            cp["processor"].generate_mjpeg(),
+            media_type="multipart/x-mixed-replace; boundary=frame",
+        )
 
 
 @app.get("/cameras/{cam_id}/resolution")

@@ -177,6 +177,12 @@ export async function getCameraROIs(camId) {
   return res.json();
 }
 
+export async function getConnectedCameras() {
+  const res = await fetch("/cameras");
+  const data = await res.json();
+  return (data.cameras || []).filter((c) => c.stream_connected && c.enabled);
+}
+
 export async function saveROI(camId, points, slotId) {
   const body = { points };
   if (slotId) body.slot_id = slotId;

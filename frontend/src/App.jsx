@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Upload, message } from "antd";
-import { InboxOutlined, VideoCameraOutlined, FolderOpenOutlined, HistoryOutlined, SettingOutlined } from "@ant-design/icons";
+import { InboxOutlined, VideoCameraOutlined, FolderOpenOutlined, HistoryOutlined, SettingOutlined, AppstoreOutlined } from "@ant-design/icons";
 import VideoPlayer from "./components/VideoPlayer";
 import ROIControls from "./components/ROIControls";
 import StatusPanel from "./components/StatusPanel";
 import RTSPInput from "./components/RTSPInput";
 import HistoryPanel from "./components/HistoryPanel";
 import CameraManager from "./components/CameraManager";
+import MonitorGrid from "./components/MonitorGrid";
 import { uploadVideo, getResolution, saveROI, clearROIs, getROIs, getCameraStatus } from "./utils/api";
 
 const MODE = { IDLE: 0, MANUAL: 1, AUTO: 2 };
@@ -164,11 +165,18 @@ export default function App() {
         </div>
         <div className="header-nav">
           <button
+            className={`nav-btn ${page === "monitor-grid" ? "active" : ""}`}
+            onClick={() => setPage("monitor-grid")}
+          >
+            <AppstoreOutlined />
+            <span>Monitor Grid</span>
+          </button>
+          <button
             className={`nav-btn ${page === "main" ? "active" : ""}`}
             onClick={() => setPage("main")}
           >
             <VideoCameraOutlined />
-            <span>Monitor</span>
+            <span>Setup Mode</span>
           </button>
           <button
             className={`nav-btn ${page === "cameras" ? "active" : ""}`}
@@ -191,6 +199,8 @@ export default function App() {
         <CameraManager />
       ) : page === "history" ? (
         <HistoryPanel />
+      ) : page === "monitor-grid" ? (
+        <MonitorGrid />
       ) : (
         <div className="main-area">
           <div className="source-panel">
